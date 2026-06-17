@@ -2,6 +2,8 @@ package com.carbonfootprint.platform.ingestion.service;
 
 import com.carbonfootprint.platform.activity.model.Activity;
 import com.carbonfootprint.platform.activity.port.out.ActivityRepository;
+import com.carbonfootprint.platform.carbon.calculation.CarbonCalculationEngine;
+import com.carbonfootprint.platform.carbon.calculation.model.EmissionResult;
 import com.carbonfootprint.platform.document.model.RawDocument;
 import com.carbonfootprint.platform.document.port.out.RawDocumentRepository;
 import com.carbonfootprint.platform.ingestion.model.ExtractionResult;
@@ -26,7 +28,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Core orchestrator of the Activity Ingestion Pipeline.
@@ -43,7 +48,8 @@ import java.util.List;
  *   <li><strong>ExtractionResult validation</strong> — runs all {@link ExtractionResultValidator}s; halts on failure.</li>
  *   <li><strong>Conversion</strong> — converts the validated {@link ExtractionResult} into an {@link Activity}.</li>
  *   <li><strong>Normalisation</strong> — runs all {@link ActivityNormalizer}s in order.</li>
- *   <li><strong>Activity persistence</strong> — saves the normalised activity.</li>
+ *   <li><strong>Carbon calculation</strong> — calculates CO₂e emissions via {@link CarbonCalculationEngine} and stores the result in activity metadata.</li>
+ *   <li><strong>Activity persistence</strong> — saves the normalised activity with carbon assessment.</li>
  * </ol>
  *
  * <h3>Extensibility</h3>
@@ -67,6 +73,7 @@ public class IngestionPipelineService implements IngestionUseCase {
     private final List<ExtractionResultValidator> extractionResultValidators;
     private final ExtractionResultToActivityConverter extractionResultToActivityConverter;
     private final List<ActivityNormalizer>   activityNormalizers;
+    private final CarbonCalculationEngine    carbonCalculationEngine;
     private final RawDocumentRepository      rawDocumentRepository;
     private final ActivityRepository         activityRepository;
 
@@ -138,8 +145,13 @@ public class IngestionPipelineService implements IngestionUseCase {
                 normalisedActivity.getCategory(),
                 normalisedActivity.getCurrency());
 
-        // ── Step 10: Persist Activity ──────────────────────────────────────
-        Activity savedActivity = activityRepository.save(normalisedActivity);
+        // ── Step 10: Carbon Calculation ────────────────────────────────────
+        Activity activityWithAssessment = calculateCarbon(normalisedActivity);
+        log.debug("Carbon calculation completed — carbonKg present={}",
+                activityWithAssessment.getMetadata().containsKey("carbonAssessment"));
+
+        // ── Step 11: Persist Activity ──────────────────────────────────────
+        Activity savedActivity = activityRepository.save(activityWithAssessment);
         log.info("Ingestion pipeline completed. activityId={} userId={}",
                 savedActivity.getId(), savedActivity.getUserId());
 
@@ -211,5 +223,40 @@ public class IngestionPipelineService implements IngestionUseCase {
             current = normalizer.normalize(current);
         }
         return current;
+    }
+
+    /**
+     * Calculates carbon emissions for the given activity and stores the result
+     * in the activity's metadata under the "carbonAssessment" key.
+     *
+     * <p>If no calculator produces a result (e.g., unsupported category), the
+     * activity is returned unchanged — the pipeline continues normally.
+     *
+     * @param activity the normalised activity to calculate emissions for
+     * @return the activity with carbon assessment metadata (or unchanged if no result)
+     */
+    private Activity calculateCarbon(Activity activity) {
+        try {
+            Optional<EmissionResult> emissionResult = carbonCalculationEngine.calculate(activity);
+            if (emissionResult.isPresent()) {
+                EmissionResult result = emissionResult.get();
+                Map<String, Object> assessment = new HashMap<>();
+                assessment.put("carbonKg", result.getCarbonKg());
+                assessment.put("methodology", result.getMethodology());
+                assessment.put("emissionFactorValue", result.getEmissionFactorValue());
+                assessment.put("emissionFactorSource", result.getEmissionFactorSource());
+                assessment.put("emissionFactorUnit", result.getActivityUnit());
+                assessment.put("activityQuantity", result.getActivityQuantity());
+                assessment.put("calculatedAt", result.getCalculatedAt());
+
+                Map<String, Object> updatedMetadata = new HashMap<>(activity.getMetadata());
+                updatedMetadata.put("carbonAssessment", assessment);
+                return activity.withMetadata(updatedMetadata);
+            }
+        } catch (Exception e) {
+            log.warn("Carbon calculation failed for activity {}: {}",
+                    activity.getId(), e.getMessage());
+        }
+        return activity;
     }
 }
