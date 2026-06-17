@@ -1,0 +1,105 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# Spring Boot
+spring-boot-devtools.properties
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+*.local
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+service-account*.json
+*-service-account.json
+application-secret*.yml
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Desktop.ini
+
+# Test outputs
+surefire-reports/
+*.exec
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+ocr/venv/
+
+# Environment Variables
+.env
+.env.*
+
+# Python Build
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Pytest
+.pytest_cache/
+
+# Mypy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# PaddleOCR Models (optional if downloaded locally)
+*.pdparams
+*.pdmodel
+*.pdiparams
+
+ocr/venv/

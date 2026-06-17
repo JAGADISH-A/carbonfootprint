@@ -1,0 +1,24 @@
+# =============================================================================
+#  Local Development Overrides
+#  Activated with: --spring.profiles.active=local
+#  Copy .env.example to .env and source it before starting.
+# =============================================================================
+
+spring:
+  config:
+    activate:
+      on-profile: local
+
+logging:
+  level:
+    com.carbonfootprint: DEBUG
+    org.springframework.web: DEBUG
+
+carbon:
+  # For local dev, you can point to a local Firestore emulator:
+  # firestore:
+  #   project-id: demo-carbon-local
+  # Then start emulator: gcloud emulators firestore start
+
+  cors:
+    allowed-origins: "http://localhost:5173,http://localhost:3000,http://localhost:4173"

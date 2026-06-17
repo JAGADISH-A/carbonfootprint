@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Base resets ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar (dark theme) ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1e293b; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* ── Custom utilities ─────────────────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-surface-card border border-surface-border rounded-2xl p-6;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 text-white font-medium px-4 py-2 rounded-lg
+           transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500
+           focus:ring-offset-2 focus:ring-offset-surface;
+  }
+
+  .btn-ghost {
+    @apply text-slate-400 hover:text-white hover:bg-surface-card px-4 py-2 rounded-lg
+           transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply badge bg-brand-900 text-brand-300 border border-brand-800;
+  }
+
+  .badge-slate {
+    @apply badge bg-slate-800 text-slate-300 border border-slate-700;
+  }
+
+  .input {
+    @apply w-full bg-surface-card border border-surface-border rounded-lg px-3 py-2.5
+           text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500
+           focus:ring-1 focus:ring-brand-500 transition-all duration-200;
+  }
+}

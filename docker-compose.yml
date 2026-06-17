@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  ocr-sidecar:
+    build:
+      context: ./ocr
+      dockerfile: Dockerfile
+    container_name: ocr-sidecar
+    ports:
+      - "8001:8001"
+    environment:
+      - PADDLE_OCR_LANG=en
+    restart: unless-stopped
+    networks:
+      - carbon-network
+
+  # ── Backend Placeholder (Future Dockerization) ─────────────────────────────
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: carbon-backend
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - PADDLE_OCR_URL=http://ocr-sidecar:8001
+  #     - OCR_PROVIDER=paddle
+  #     # - FIRESTORE_EMULATOR_HOST=firestore-emulator:8089
+  #   depends_on:
+  #     ocr-sidecar:
+  #       condition: service_healthy
+  #   networks:
+  #     - carbon-network
+
+  # ── Firestore Emulator Placeholder (Future Dockerization) ──────────────────
+  # firestore-emulator:
+  #   image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+  #   container_name: firestore-emulator
+  #   ports:
+  #     - "8089:8089"
+  #   command: gcloud beta emulators firestore start --host-port=0.0.0.0:8089
+  #   networks:
+  #     - carbon-network
+
+networks:
+  carbon-network:
+    name: carbon-network
+    driver: bridge

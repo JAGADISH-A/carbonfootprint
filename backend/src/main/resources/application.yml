@@ -1,0 +1,104 @@
+# =============================================================================
+#  Carbon Intelligence Platform — Application Configuration
+#  All sensitive values are read from environment variables.
+#  No secrets are hardcoded.
+# =============================================================================
+
+spring:
+  application:
+    name: carbon-intelligence-platform
+
+  # ── Jackson (JSON serialisation) ────────────────────────────────────────────
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # ── File Upload ─────────────────────────────────────────────────────────────
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+
+
+  # ── Actuator ─────────────────────────────────────────────────────────────────
+  # Note: Custom health endpoint is at /api/v1/health
+  # Spring Actuator health is at /actuator/health
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info,metrics
+    endpoint:
+      health:
+        show-details: when-authorized
+
+# =============================================================================
+#  Carbon Platform — Custom Configuration Namespace
+# =============================================================================
+carbon:
+
+  # ── Google Firestore ─────────────────────────────────────────────────────────
+  firestore:
+    project-id: ${GCP_PROJECT_ID}
+    activities-collection: ${FIRESTORE_ACTIVITIES_COLLECTION:activities}
+    raw-documents-collection: ${FIRESTORE_RAW_DOCS_COLLECTION:raw_documents}
+    carbon-assessments-collection: ${FIRESTORE_CARBON_COLLECTION:carbon_assessments}
+
+  # ── File Upload ──────────────────────────────────────────────────────────────
+  upload:
+    supported-mime-types: ${CARBON_SUPPORTED_MIME_TYPES:image/jpeg,image/png,image/webp,application/pdf}
+
+
+  # ── Google Gemini AI ─────────────────────────────────────────────────────────
+  gemini:
+    api-key: ${GEMINI_API_KEY}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    # Max tokens for extraction prompt response
+    max-output-tokens: ${GEMINI_MAX_TOKENS:1024}
+    temperature: ${GEMINI_TEMPERATURE:0.1}
+
+  # ── OCR Configuration ────────────────────────────────────────────────────────
+  ocr:
+    # Active provider: paddle | cloud_vision (future)
+    provider: ${OCR_PROVIDER:paddle}
+    paddle:
+      base-url: ${PADDLE_OCR_URL:http://localhost:8001}
+      timeout-seconds: ${PADDLE_OCR_TIMEOUT:30}
+
+  # ── CORS ─────────────────────────────────────────────────────────────────────
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+  # ── Google OAuth 2.0 ─────────────────────────────────────────────────────────
+  security:
+    oauth2:
+      # Used for server-side Gmail API calls (Phase 2)
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+
+# =============================================================================
+#  OpenAPI / Swagger UI
+# =============================================================================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+# =============================================================================
+#  Logging
+# =============================================================================
+logging:
+  level:
+    com.carbonfootprint: DEBUG
+    com.google.cloud: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
