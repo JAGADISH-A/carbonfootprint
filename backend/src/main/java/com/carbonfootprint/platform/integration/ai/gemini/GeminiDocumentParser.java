@@ -71,6 +71,11 @@ public class GeminiDocumentParser implements DocumentParser {
     ) {
         this.geminiModel = geminiModel;
         this.geminiApiKey = geminiApiKey;
+        if (this.geminiApiKey == null || this.geminiApiKey.isBlank()) {
+        log.error("Gemini API Key is NULL or EMPTY");
+         } else {
+    log.info("Gemini API Key being used: {}...", this.geminiApiKey.substring(0, 10));
+}
         this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
                 .baseUrl("https://generativelanguage.googleapis.com")
@@ -139,29 +144,88 @@ public class GeminiDocumentParser implements DocumentParser {
 
     private String buildExtractionPrompt(String rawText, ActivitySource source) {
         return """
-                Extract the following fields from the document text below.
-                
-                The fields should be:
-                - merchant: String or null (inferred merchant or vendor name)
-                - amount: Number or null (numeric transaction amount, do not include currency symbols)
-                - currency: String or null (raw currency symbol/abbreviation like Rs, INR, USD, $)
-                - unit: String or null (physical quantity unit, e.g. KWH, L, kg)
-                - category: String or null (MUST be one of: ELECTRICITY, FOOD, FUEL, FLIGHT, SHOPPING, TRANSPORT, ACCOMMODATION, GAS, WATER, OTHER)
-                - location: String or null (physical location/address)
-                - occurredAt: String or null (ISO-8601 UTC format, e.g. 2026-06-17T14:19:30Z)
-                - description: String or null (brief description of the transaction/activity)
-                
-                Constraints:
-                1. Return ONLY valid JSON.
-                2. Do NOT wrap the response inside Markdown.
-                3. Do NOT use ```json or ``` code blocks.
-                4. Do NOT explain anything.
-                5. Do NOT add comments.
-                6. If a field cannot be determined, set its value to null. Do NOT guess.
-                7. Category MUST be one of the supported ActivityCategory values listed above or null.
-                
+                You are an expert document information extraction engine.
+
+                Your job is to extract structured information from receipts, invoices, bills, tickets, utility bills and other transaction documents.
+
+                Return ONLY valid JSON.
+                Never return markdown.
+                Never explain anything.
+                If a field cannot be determined, return null.
+
+                Extract the following fields:
+
+                {
+                  "merchant": string,
+                  "merchantType": string,
+                  "amount": number,
+                  "currency": string,
+                  "taxAmount": number,
+                  "subtotal": number,
+                  "discount": number,
+                  "invoiceNumber": string,
+                  "paymentMethod": string,
+                  "category": string,
+                  "subcategory": string,
+                  "unit": string,
+                  "quantity": number,
+                  "location": string,
+                  "city": string,
+                  "country": string,
+                  "occurredAt": ISO8601 datetime,
+                  "description": string,
+                  "items":[
+                      {
+                          "name": string,
+                          "quantity": number,
+                          "unitPrice": number,
+                          "totalPrice": number,
+                          "category": string
+                      }
+                  ]
+                }
+
+                Rules:
+
+                - amount = final amount paid.
+                - subtotal = amount before tax.
+                - taxAmount = GST/VAT/CGST/SGST etc.
+                - discount = total discount.
+                - currency should be ISO code whenever possible (INR, USD, EUR).
+                - category MUST be one of:
+
+                ELECTRICITY
+                FOOD
+                FUEL
+                FLIGHT
+                SHOPPING
+                TRANSPORT
+                ACCOMMODATION
+                WATER
+                GAS
+                OTHER
+
+                - merchantType should be one word such as:
+                Restaurant
+                Supermarket
+                Hotel
+                Fuel Station
+                Airline
+                Taxi
+                Retail
+                Hospital
+                Utility
+                Entertainment
+                Shopping Mall
+                Government
+                Other
+
+                - Never invent values.
+                - Never estimate.
+                - If unsure, return null.
+
                 Document source type: %s
-                
+
                 Document text:
                 %s
                 """.formatted(source, rawText);
@@ -215,12 +279,14 @@ public class GeminiDocumentParser implements DocumentParser {
         String currency = extractedNode.hasNonNull("currency") ? extractedNode.get("currency").asText() : null;
 
         ActivityCategory category = null;
+        String rawCategoryStr = null;
         if (extractedNode.hasNonNull("category")) {
             String catStr = extractedNode.get("category").asText();
             try {
                 category = ActivityCategory.valueOf(catStr.toUpperCase().trim());
             } catch (IllegalArgumentException e) {
-                log.warn("Failed to map category '{}' to ActivityCategory enum", catStr);
+                log.warn("Failed to map category '{}' to ActivityCategory enum — storing as rawCategory for normalizer", catStr);
+                rawCategoryStr = catStr;
             }
         }
 
@@ -249,7 +315,9 @@ public class GeminiDocumentParser implements DocumentParser {
             if (!excludedKeys.contains(key)) {
                 JsonNode value = entry.getValue();
                 if (!value.isNull()) {
-                    if (value.isNumber()) {
+                    if (value.isArray() || value.isObject()) {
+                        metadata.put(key, objectMapper.convertValue(value, Object.class));
+                    } else if (value.isNumber()) {
                         metadata.put(key, value.numberValue());
                     } else if (value.isBoolean()) {
                         metadata.put(key, value.booleanValue());
@@ -259,6 +327,11 @@ public class GeminiDocumentParser implements DocumentParser {
                 }
             }
         });
+
+        // Store the raw category string for the normalizer if enum parsing failed
+        if (rawCategoryStr != null) {
+            metadata.put("rawCategory", rawCategoryStr);
+        }
 
         int coreFieldsExtracted = 0;
         if (merchant != null && !merchant.isBlank()) {

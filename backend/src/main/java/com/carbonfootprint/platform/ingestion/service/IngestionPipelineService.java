@@ -10,6 +10,8 @@ import com.carbonfootprint.platform.ingestion.model.IngestionRequest;
 import com.carbonfootprint.platform.ingestion.model.IngestionResult;
 import com.carbonfootprint.platform.ingestion.model.ValidationResult;
 import com.carbonfootprint.platform.ingestion.normalization.ActivityNormalizer;
+import com.carbonfootprint.platform.ingestion.normalization.ActivityCarbonEnricher;
+import com.carbonfootprint.platform.ingestion.normalization.ExtractionResultNormalizer;
 import com.carbonfootprint.platform.ingestion.normalization.ExtractionResultToActivityConverter;
 import com.carbonfootprint.platform.ingestion.port.in.IngestionUseCase;
 import com.carbonfootprint.platform.ingestion.port.out.DocumentParser;
@@ -36,6 +38,8 @@ import java.util.List;
  *   <li><strong>RawDocument persistence</strong> — saves the raw document immediately for audit/reprocessing.</li>
  *   <li><strong>RawDocument validation</strong> — runs all {@link RawDocumentValidator}s in order; halts on failure.</li>
  *   <li><strong>Parsing</strong> — finds the {@link DocumentParser} that supports the document and extracts an {@link ExtractionResult}.</li>
+ *   <li><strong>ExtractionResult normalization</strong> — normalizes currency, merchant, amount, category, dates, metadata, and recomputes confidence.</li>
+ *   <li><strong>Carbon enrichment</strong> — infers fuel type, transport mode, cabin class, merchant industry, and other carbon-domain hints via {@link ActivityCarbonEnricher}.</li>
  *   <li><strong>ExtractionResult validation</strong> — runs all {@link ExtractionResultValidator}s; halts on failure.</li>
  *   <li><strong>Conversion</strong> — converts the validated {@link ExtractionResult} into an {@link Activity}.</li>
  *   <li><strong>Normalisation</strong> — runs all {@link ActivityNormalizer}s in order.</li>
@@ -58,6 +62,8 @@ public class IngestionPipelineService implements IngestionUseCase {
     private final List<IngestionSource>      ingestionSources;
     private final List<RawDocumentValidator> rawDocumentValidators;
     private final List<DocumentParser>       documentParsers;
+    private final ExtractionResultNormalizer extractionResultNormalizer;
+    private final ActivityCarbonEnricher      activityCarbonEnricher;
     private final List<ExtractionResultValidator> extractionResultValidators;
     private final ExtractionResultToActivityConverter extractionResultToActivityConverter;
     private final List<ActivityNormalizer>   activityNormalizers;
@@ -95,8 +101,18 @@ public class IngestionPipelineService implements IngestionUseCase {
         log.debug("ExtractionResult created — parser={} confidence={}", 
                 extractionResult.getParserName(), extractionResult.getConfidence());
 
-        // ── Step 6: Validate ExtractionResult ──────────────────────────────
-        ValidationResult extractionValidationResult = runExtractionValidators(extractionResult);
+        // ── Step 6: Normalize ExtractionResult ─────────────────────────────
+        ExtractionResult normalizedExtractionResult = extractionResultNormalizer.normalize(extractionResult);
+        log.debug("ExtractionResult normalized — confidence={}",
+                normalizedExtractionResult.getConfidence());
+
+        // ── Step 6b: Enrich ExtractionResult with carbon hints ─────────────
+        ExtractionResult enrichedExtractionResult = activityCarbonEnricher.enrich(normalizedExtractionResult);
+        log.debug("ExtractionResult enriched — carbonHints present={}",
+                enrichedExtractionResult.getMetadata().containsKey("carbonHints"));
+
+        // ── Step 7: Validate ExtractionResult ──────────────────────────────
+        ValidationResult extractionValidationResult = runExtractionValidators(enrichedExtractionResult);
         if (!extractionValidationResult.isValid()) {
             log.warn("Extraction validation failed for documentId={}: {}",
                     rawDocument.getId(), extractionValidationResult.getViolations());
@@ -106,23 +122,23 @@ public class IngestionPipelineService implements IngestionUseCase {
 
         log.debug("Extraction validation completed");
 
-        // ── Step 7: Convert to Activity ────────────────────────────────────
+        // ── Step 8: Convert to Activity ────────────────────────────────────
         Activity parsedActivity = extractionResultToActivityConverter.convert(
-                extractionResult,
+                enrichedExtractionResult,
                 rawDocument,
                 request.getUserId()
         );
 
         log.debug("Activity conversion completed");
 
-        // ── Step 8: Normalise Activity ─────────────────────────────────────
+        // ── Step 9: Normalise Activity ─────────────────────────────────────
         Activity normalisedActivity = normalise(parsedActivity);
         log.debug("Activity normalised — merchant={} category={} currency={}",
                 normalisedActivity.getMerchant(),
                 normalisedActivity.getCategory(),
                 normalisedActivity.getCurrency());
 
-        // ── Step 9: Persist Activity ───────────────────────────────────────
+        // ── Step 10: Persist Activity ──────────────────────────────────────
         Activity savedActivity = activityRepository.save(normalisedActivity);
         log.info("Ingestion pipeline completed. activityId={} userId={}",
                 savedActivity.getId(), savedActivity.getUserId());
