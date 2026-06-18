@@ -3,8 +3,12 @@ package com.carbonfootprint.platform.platform.config;
 import com.carbonfootprint.platform.activity.model.Activity;
 import com.carbonfootprint.platform.activity.model.ActivityCategory;
 import com.carbonfootprint.platform.activity.port.out.ActivityRepository;
+import com.carbonfootprint.platform.carbon.calculation.model.EmissionFactor;
+import com.carbonfootprint.platform.carbon.calculation.model.EmissionFactorRegistry;
 import com.carbonfootprint.platform.document.model.RawDocument;
 import com.carbonfootprint.platform.document.port.out.RawDocumentRepository;
+import com.carbonfootprint.platform.ingestion.enrichment.model.FuelType;
+import com.carbonfootprint.platform.ingestion.enrichment.model.TransportMode;
 import com.carbonfootprint.platform.ingestion.model.ExtractionResult;
 import com.carbonfootprint.platform.ingestion.port.out.DocumentParser;
 import com.carbonfootprint.platform.integration.ocr.OcrProvider;
@@ -117,6 +121,143 @@ public class StubInfrastructureConfig {
             public void deleteById(String id) {
                 store.remove(id);
             }
+        };
+    }
+
+    @Bean
+    public EmissionFactorRegistry stubEmissionFactorRegistry() {
+        List<EmissionFactor> factors = List.of(
+                // ── FUEL ──────────────────────────────────────────────
+                EmissionFactor.builder()
+                        .id("stub-fuel-petrol").category(ActivityCategory.FUEL)
+                        .fuelType(FuelType.PETROL)
+                        .value(new java.math.BigDecimal("2.31")).unit("litre")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-fuel-diesel").category(ActivityCategory.FUEL)
+                        .fuelType(FuelType.DIESEL)
+                        .value(new java.math.BigDecimal("2.68")).unit("litre")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-fuel-lpg").category(ActivityCategory.FUEL)
+                        .fuelType(FuelType.LPG)
+                        .value(new java.math.BigDecimal("1.51")).unit("litre")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-fuel-cng").category(ActivityCategory.FUEL)
+                        .fuelType(FuelType.CNG)
+                        .value(new java.math.BigDecimal("2.50")).unit("kg")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+
+                // ── ELECTRICITY ───────────────────────────────────────
+                EmissionFactor.builder()
+                        .id("stub-electricity-grid").category(ActivityCategory.ELECTRICITY)
+                        .value(new java.math.BigDecimal("0.82")).unit("kWh")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+
+                // ── FLIGHT ────────────────────────────────────────────
+                EmissionFactor.builder()
+                        .id("stub-flight-economy").category(ActivityCategory.FLIGHT)
+                        .value(new java.math.BigDecimal("0.14")).unit("passenger-km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-flight-business").category(ActivityCategory.FLIGHT)
+                        .value(new java.math.BigDecimal("0.42")).unit("passenger-km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+
+                // ── TRANSPORT ─────────────────────────────────────────
+                EmissionFactor.builder()
+                        .id("stub-transport-taxi").category(ActivityCategory.TRANSPORT)
+                        .transportMode(TransportMode.TAXI)
+                        .value(new java.math.BigDecimal("0.21")).unit("km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-transport-bus").category(ActivityCategory.TRANSPORT)
+                        .transportMode(TransportMode.BUS)
+                        .value(new java.math.BigDecimal("0.089")).unit("km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-transport-metro").category(ActivityCategory.TRANSPORT)
+                        .transportMode(TransportMode.METRO)
+                        .value(new java.math.BigDecimal("0.05")).unit("km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+                EmissionFactor.builder()
+                        .id("stub-transport-train").category(ActivityCategory.TRANSPORT)
+                        .transportMode(TransportMode.TRAIN)
+                        .value(new java.math.BigDecimal("0.04")).unit("km")
+                        .source("STUB").version("stub-v1").methodName("Stub — Default EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build(),
+
+                // ── SHOPPING ──────────────────────────────────────────
+                EmissionFactor.builder()
+                        .id("stub-shopping-default").category(ActivityCategory.SHOPPING)
+                        .value(new java.math.BigDecimal("0.00085")).unit("INR")
+                        .source("STUB").version("stub-v1").methodName("Stub — Spend-based EF")
+                        .validFrom(Instant.parse("2024-01-01T00:00:00Z")).build()
+        );
+
+        return new EmissionFactorRegistry() {
+            private final List<EmissionFactor> allFactors = List.copyOf(factors);
+
+            @Override
+            public Optional<EmissionFactor> find(ActivityCategory category, Instant validAt) {
+                return allFactors.stream()
+                        .filter(f -> f.getCategory() == category)
+                        .filter(f -> f.isValidAt(validAt))
+                        .filter(f -> f.getFuelType().isEmpty())
+                        .filter(f -> f.getTransportMode().isEmpty())
+                        .min(java.util.Comparator.comparing(EmissionFactor::getValidFrom).reversed());
+            }
+
+            @Override
+            public Optional<EmissionFactor> find(ActivityCategory category, FuelType fuelType, Instant validAt) {
+                return allFactors.stream()
+                        .filter(f -> f.getCategory() == category)
+                        .filter(f -> f.getFuelType().orElse(null) == fuelType)
+                        .filter(f -> f.isValidAt(validAt))
+                        .min(java.util.Comparator.comparing(EmissionFactor::getValidFrom).reversed());
+            }
+
+            @Override
+            public Optional<EmissionFactor> find(ActivityCategory category, TransportMode transportMode, Instant validAt) {
+                return allFactors.stream()
+                        .filter(f -> f.getCategory() == category)
+                        .filter(f -> f.getTransportMode().orElse(null) == transportMode)
+                        .filter(f -> f.isValidAt(validAt))
+                        .min(java.util.Comparator.comparing(EmissionFactor::getValidFrom).reversed());
+            }
+
+            @Override
+            public Optional<EmissionFactor> find(ActivityCategory category, FuelType fuelType,
+                                                  TransportMode transportMode, String region, Instant validAt) {
+                return allFactors.stream()
+                        .filter(f -> f.getCategory() == category)
+                        .filter(f -> f.getFuelType().orElse(null) == fuelType || f.getFuelType().isEmpty())
+                        .filter(f -> f.getTransportMode().orElse(null) == transportMode || f.getTransportMode().isEmpty())
+                        .filter(f -> f.isValidAt(validAt))
+                        .min(java.util.Comparator.comparing(EmissionFactor::getValidFrom).reversed());
+            }
+
+            @Override
+            public List<EmissionFactor> findAll() { return allFactors; }
+
+            @Override
+            public List<EmissionFactor> findByCategory(ActivityCategory category) {
+                return allFactors.stream().filter(f -> f.getCategory() == category).toList();
+            }
+
+            @Override
+            public int count() { return allFactors.size(); }
         };
     }
 }

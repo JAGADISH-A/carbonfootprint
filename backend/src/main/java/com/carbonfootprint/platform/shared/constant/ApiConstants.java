@@ -31,9 +31,10 @@ public final class ApiConstants {
 
     // ── Firestore Collection Names (defaults — overridable via application.yml) ─
 
-    public static final String COLLECTION_ACTIVITIES        = "activities";
-    public static final String COLLECTION_RAW_DOCUMENTS     = "raw_documents";
+    public static final String COLLECTION_ACTIVITIES         = "activities";
+    public static final String COLLECTION_RAW_DOCUMENTS      = "raw_documents";
     public static final String COLLECTION_CARBON_ASSESSMENTS = "carbon_assessments";
+    public static final String COLLECTION_EMISSION_FACTORS   = "emission_factors";
 
     private ApiConstants() {
         // Utility class — no instantiation
