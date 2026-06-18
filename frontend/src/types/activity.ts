@@ -40,7 +40,7 @@ export interface Activity {
   currency: string | null
   unit: string | null
   location: string | null
-  occurredAt: string // ISO 8601 UTC
+  occurredAt: string
   description: string | null
   rawDocumentId: string | null
   metadata: Record<string, unknown>
@@ -89,6 +89,66 @@ export interface IngestionResult {
   activity: Activity | null
   message: string
   processedAt: string
+}
+
+// ── Backend response types ─────────────────────────────────────────────────
+
+export interface CategoryEmissionSummary {
+  category: string
+  carbonKg: number
+  activityCount: number
+  percentageOfTotal: number
+}
+
+export interface MonthlyEmissionTrend {
+  month: string
+  carbonKg: number
+  activityCount: number
+}
+
+export interface TopEmissionActivity {
+  activityId: string
+  merchant: string | null
+  category: string
+  carbonKg: number
+  description: string | null
+  occurredAt: string
+}
+
+export interface CarbonAnalyticsResponse {
+  totalCarbonKg: number
+  categoryTotals: CategoryEmissionSummary[]
+  monthlyTrend: MonthlyEmissionTrend[]
+  topActivities: TopEmissionActivity[]
+  averageDailyKg: number
+  activityCount: number
+  periodStart: string
+  periodEnd: string
+}
+
+export interface CarbonInsightResponse {
+  summary: string
+  achievements: string[]
+  warnings: string[]
+  recommendations: string[]
+  insights: string[]
+}
+
+export interface AICarbonCoachResponse {
+  summary: string
+  strengths: string[]
+  concerns: string[]
+  recommendations: string[]
+  weeklyChallenge: string
+  motivation: string
+  aiGenerated: boolean
+}
+
+export interface ReceiptUploadResponse {
+  filename: string
+  mimeType: string
+  fileSize: number
+  receivedAt: string
 }
 
 // ── UI utility types ───────────────────────────────────────────────────────

@@ -1,0 +1,7 @@
+export { default as WelcomeHero } from './WelcomeHero'
+export { default as CarbonSummary } from './CarbonSummary'
+export { default as UploadCTA } from './UploadCTA'
+export { default as CoachPreview } from './CoachPreview'
+export { default as QuickInsights } from './QuickInsights'
+export { default as RecentActivity } from './RecentActivity'
+export { default as SustainabilityTip } from './SustainabilityTip'
