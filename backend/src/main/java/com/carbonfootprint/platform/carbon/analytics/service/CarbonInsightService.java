@@ -1,17 +1,19 @@
 package com.carbonfootprint.platform.carbon.analytics.service;
 
-import com.carbonfootprint.platform.activity.model.Activity;
 import com.carbonfootprint.platform.carbon.analytics.model.CarbonAnalyticsResponse;
 import com.carbonfootprint.platform.carbon.analytics.model.CarbonInsightResponse;
 import com.carbonfootprint.platform.carbon.analytics.model.CategoryEmissionSummary;
 import com.carbonfootprint.platform.carbon.analytics.model.MonthlyEmissionTrend;
 import com.carbonfootprint.platform.carbon.analytics.model.TopEmissionActivity;
+import com.carbonfootprint.platform.carbon.port.in.CarbonAnalyticsUseCase;
 import com.carbonfootprint.platform.carbon.port.in.CarbonInsightUseCase;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +23,7 @@ import java.util.Optional;
  *
  * <h3>Responsibilities</h3>
  * <ul>
+ *   <li>Delegates to {@link CarbonAnalyticsUseCase} for aggregation (no duplication)</li>
  *   <li>Analyses {@link CarbonAnalyticsResponse} to produce human-readable insights</li>
  *   <li>Identifies achievements, warnings, and recommendations</li>
  *   <li>Generates a concise summary of the user's carbon footprint</li>
@@ -28,13 +31,14 @@ import java.util.Optional;
  *
  * <h3>Design</h3>
  * Fully deterministic — no external service calls (Gemini integration deferred).
- * All logic is pure computation over the input data.
+ * Reuses the existing analytics pipeline via {@link CarbonAnalyticsUseCase}.
  *
  * @see CarbonInsightUseCase
- * @see CarbonAnalyticsResponse
+ * @see CarbonAnalyticsUseCase
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CarbonInsightService implements CarbonInsightUseCase {
 
     private static final BigDecimal HIGH_EMISSION_THRESHOLD_KG = BigDecimal.valueOf(100);
@@ -42,10 +46,22 @@ public class CarbonInsightService implements CarbonInsightUseCase {
     private static final int HIGH_CONCENTRATION_PERCENTAGE = 60;
     private static final int TREND_SIGNIFICANT_INCREASE_PERCENTAGE = 20;
 
+    private final CarbonAnalyticsUseCase carbonAnalyticsUseCase;
+
     @Override
-    public Optional<CarbonInsightResponse> generateInsights(
-            Optional<CarbonAnalyticsResponse> analyticsResponse,
-            List<Activity> recentActivities) {
+    public Optional<CarbonInsightResponse> generateInsights(String userId) {
+        Optional<CarbonAnalyticsResponse> analyticsResponse = carbonAnalyticsUseCase.getAnalytics(userId);
+        return buildInsightsFromAnalytics(analyticsResponse);
+    }
+
+    @Override
+    public Optional<CarbonInsightResponse> generateInsights(String userId, Instant from, Instant to) {
+        Optional<CarbonAnalyticsResponse> analyticsResponse = carbonAnalyticsUseCase.getAnalytics(userId, from, to);
+        return buildInsightsFromAnalytics(analyticsResponse);
+    }
+
+    private Optional<CarbonInsightResponse> buildInsightsFromAnalytics(
+            Optional<CarbonAnalyticsResponse> analyticsResponse) {
 
         if (analyticsResponse.isEmpty()) {
             log.debug("CarbonInsightService — no analytics data, skipping insight generation");
@@ -62,7 +78,7 @@ public class CarbonInsightService implements CarbonInsightUseCase {
         String summary = buildSummary(analytics);
         List<String> achievements = buildAchievements(analytics);
         List<String> warnings = buildWarnings(analytics);
-        List<String> recommendations = buildRecommendations(analytics, recentActivities);
+        List<String> recommendations = buildRecommendations(analytics);
         List<String> insights = buildInsights(analytics);
 
         CarbonInsightResponse response = CarbonInsightResponse.builder()
@@ -180,7 +196,7 @@ public class CarbonInsightService implements CarbonInsightUseCase {
 
     // ── Recommendations ───────────────────────────────────────────────────
 
-    private List<String> buildRecommendations(CarbonAnalyticsResponse analytics, List<Activity> recentActivities) {
+    private List<String> buildRecommendations(CarbonAnalyticsResponse analytics) {
         List<String> recommendations = new ArrayList<>();
 
         CategoryEmissionSummary highest = firstCategory(analytics);
