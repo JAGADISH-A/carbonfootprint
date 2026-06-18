@@ -38,8 +38,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AICarbonCoachService implements AICarbonCoachUseCase {
 
-    private static final String DEFAULT_WEEKLY_CHALLENGE = "Walk instead of driving once this week.";
-    private static final String DEFAULT_MOTIVATION = "Every small step counts.";
+    private static final String DEFAULT_WEEKLY_CHALLENGE = "Here's a fun one: try going car-free for just one day this week and see how it feels.";
+    private static final String DEFAULT_MOTIVATION = "You're already doing better than you think. Every small choice adds up — keep going!";
 
     private final CarbonInsightUseCase carbonInsightUseCase;
     private final GeminiClient geminiClient;

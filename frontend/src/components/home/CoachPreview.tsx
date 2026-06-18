@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight, Sparkles, MessageCircle } from 'lucide-react'
 import { getAICoach } from '@/api/services'
 import type { AICarbonCoachResponse } from '@/types/activity'
 
@@ -41,7 +41,10 @@ export default function CoachPreview() {
     )
   }
 
-  const hasData = data && data.recommendations.length > 0
+  const hasData = data && data.strengths.length > 0
+  const firstInsight = hasData
+    ? (data!.summary || data!.strengths[0])
+    : null
 
   return (
     <motion.div
@@ -71,16 +74,16 @@ export default function CoachPreview() {
           <span className="text-lg">🌱</span>
         </motion.div>
 
-        <div>
+        <div className="flex-1">
           <h3 className="text-sm font-semibold text-ink">EcoBuddy</h3>
-          <p className="text-[11px] text-ink-faint">Your AI sustainability coach</p>
+          <p className="text-[11px] text-ink-faint">Your personal sustainability coach</p>
         </div>
         {data?.aiGenerated && (
           <motion.span
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
-            className="ml-auto badge-green"
+            className="badge-green"
           >
             <motion.div
               animate={{ rotate: [0, 15, -15, 0] }}
@@ -94,22 +97,33 @@ export default function CoachPreview() {
       </div>
 
       {hasData ? (
-        <div className="space-y-2 mb-4">
-          {data!.recommendations.slice(0, 2).map((rec, i) => (
+        <div className="space-y-3 mb-4">
+          <motion.div
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            className="flex items-start gap-2"
+          >
+            <MessageCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-ink leading-relaxed line-clamp-3">
+              {firstInsight}
+            </p>
+          </motion.div>
+          {data!.recommendations.length > 0 && (
             <motion.p
-              key={i}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + i * 0.1, duration: 0.4 }}
-              className="text-sm text-ink-muted leading-relaxed line-clamp-2"
+              transition={{ delay: 0.4, duration: 0.4 }}
+              className="text-xs text-ink-muted leading-relaxed line-clamp-2 ml-6"
             >
-              {rec}
+              {data!.recommendations[0]}
             </motion.p>
-          ))}
+          )}
         </div>
       ) : (
         <p className="text-sm text-ink-muted leading-relaxed mb-4">
-          Get personalized tips to reduce your carbon footprint. Upload activities to unlock AI coaching.
+          Upload some receipts and I'll analyze your footprint, spot patterns, and suggest
+          personalized ways to reduce your impact.
         </p>
       )}
 
@@ -119,7 +133,7 @@ export default function CoachPreview() {
         whileHover={{ x: 2 }}
         whileTap={{ scale: 0.97 }}
       >
-        View Full Advice
+        {hasData ? 'Chat with EcoBuddy' : 'Meet your coach'}
         <motion.div
           animate={{ x: [0, 3, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}

@@ -134,6 +134,13 @@ export interface CarbonInsightResponse {
   insights: string[]
 }
 
+export interface ActionPlanItem {
+  priority: number
+  title: string
+  whyItMatters: string
+  whatToDo: string
+}
+
 export interface AICarbonCoachResponse {
   summary: string
   strengths: string[]
@@ -142,6 +149,13 @@ export interface AICarbonCoachResponse {
   weeklyChallenge: string
   motivation: string
   aiGenerated: boolean
+  // Storytelling fields (new format)
+  whatHappened?: string
+  whatSurprisedMe?: string
+  whatsGoingWell?: string
+  biggestOpportunity?: string
+  actionPlan?: ActionPlanItem[]
+  closing?: string
 }
 
 export interface ReceiptUploadResponse {

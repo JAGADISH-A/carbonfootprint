@@ -27,14 +27,14 @@ body {
 
 @layer components {
   .card {
-    @apply bg-card rounded-3xl p-6 shadow-card border border-border-light;
+    @apply bg-card rounded-2xl p-4 shadow-card border border-border-light;
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 0.3s ease;
   }
 
   .card-interactive {
-    @apply bg-card rounded-3xl p-6 shadow-card border border-border-light
+    @apply bg-card rounded-2xl p-4 shadow-card border border-border-light
            cursor-pointer;
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
@@ -79,7 +79,7 @@ body {
   }
 
   .page-container {
-    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10;
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5;
   }
 
   .skeleton {

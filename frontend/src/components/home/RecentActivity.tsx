@@ -11,6 +11,7 @@ import {
   Droplets,
   Home,
   ArrowRight,
+  MessageCircle,
 } from 'lucide-react'
 import { getCarbonAnalytics } from '@/api/services'
 import type { CarbonAnalyticsResponse, TopEmissionActivity } from '@/types/activity'
@@ -81,8 +82,16 @@ export default function RecentActivity() {
       transition={{ duration: 0.6, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className="card"
     >
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-base font-semibold text-ink">Recent Activity</h2>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-ink">What I noticed</h2>
+            <p className="text-xs text-ink-muted">Your recent activity breakdown</p>
+          </div>
+        </div>
         {hasData && (
           <motion.button
             onClick={() => navigate('/history')}
@@ -116,8 +125,9 @@ export default function RecentActivity() {
             <span className="text-2xl">🌱</span>
           </motion.div>
           <p className="text-sm font-medium text-ink mb-1">No activities yet</p>
-          <p className="text-xs text-ink-muted max-w-[240px] mx-auto leading-relaxed">
-            Every sustainable habit begins with one action. Upload a receipt to start your timeline.
+          <p className="text-xs text-ink-muted max-w-[260px] mx-auto leading-relaxed">
+            Upload a receipt and I'll start tracking your carbon footprint.
+            Even one activity gives me something to work with.
           </p>
         </motion.div>
       ) : (
@@ -125,6 +135,7 @@ export default function RecentActivity() {
           {activities.slice(0, 5).map((activity: TopEmissionActivity, i: number) => {
             const cat = activity.category as string
             const config = categoryConfig[cat] ?? categoryConfig.OTHER
+            const label = cat.charAt(0) + cat.slice(1).toLowerCase()
 
             return (
               <motion.div
@@ -150,10 +161,10 @@ export default function RecentActivity() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-ink truncate">
-                      {activity.merchant || cat.charAt(0) + cat.slice(1).toLowerCase()}
+                      {activity.merchant || label}
                     </span>
                     <span className="badge-green text-[10px] shrink-0">
-                      {cat.charAt(0) + cat.slice(1).toLowerCase()}
+                      {label}
                     </span>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion, useSpring, useTransform } from 'framer-motion'
+import { motion, useSpring, useTransform, type MotionValue, useMotionValueEvent } from 'framer-motion'
 import { Activity, Flame, Calendar } from 'lucide-react'
 import { getCarbonAnalytics } from '@/api/services'
 import type { CarbonAnalyticsResponse } from '@/types/activity'
@@ -20,17 +20,27 @@ function useCountUp(target: number, _duration = 1, delay = 0.2) {
   return display
 }
 
+function MotionValueText({ motionValue, className }: { motionValue: MotionValue<string>; className?: string }) {
+  const [text, setText] = useState('0')
+
+  useMotionValueEvent(motionValue, 'change', (latest) => {
+    setText(latest)
+  })
+
+  return <span className={className}>{text}</span>
+}
+
 interface InsightCardProps {
   icon: React.ReactNode
   label: string
-  value: string | ReturnType<typeof useCountUp>
+  value: string | MotionValue<string>
   isNumeric: boolean
-  subtext: string
+  message: string
   delay: number
 }
 
-function InsightCard({ icon, label, value, isNumeric, subtext, delay }: InsightCardProps) {
-  const countVal = isNumeric ? (value as ReturnType<typeof useCountUp>) : null
+function InsightCard({ icon, label, value, isNumeric, message, delay }: InsightCardProps) {
+  const countVal = isNumeric ? (value as MotionValue<string>) : null
   const textVal = !isNumeric ? (value as string) : null
 
   return (
@@ -39,21 +49,25 @@ function InsightCard({ icon, label, value, isNumeric, subtext, delay }: InsightC
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -3, transition: { duration: 0.25, ease: 'easeOut' } }}
-      className="card-interactive flex items-center gap-4"
+      className="card-interactive flex items-start gap-3"
     >
       <motion.div
-        className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0"
+        className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0 mt-0.5"
         whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
         transition={{ duration: 0.4 }}
       >
         <div className="text-emerald-600">{icon}</div>
       </motion.div>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-wider mb-0.5">{label}</p>
-        <p className="text-lg font-bold text-ink leading-tight">
-          {isNumeric && countVal ? <motion.span>{countVal}</motion.span> : textVal}
-        </p>
-        <p className="text-xs text-ink-muted mt-0.5 truncate">{subtext}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-medium text-ink-faint uppercase tracking-wider mb-1">{label}</p>
+        <div className="text-lg font-bold text-ink leading-tight mb-1">
+          {isNumeric && countVal ? (
+            <MotionValueText motionValue={countVal} />
+          ) : (
+            textVal
+          )}
+        </div>
+        <p className="text-xs text-ink-muted leading-relaxed">{message}</p>
       </div>
     </motion.div>
   )
@@ -70,17 +84,37 @@ export default function QuickInsights() {
           setData(res.data)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
   const activityCount = Number(data?.activityCount ?? 0)
   const topCategory = data?.categoryTotals?.[0] ?? null
-  const avgDaily = Number(data?.averageDailyKg ?? 0)
   const totalCarbon = Number(data?.totalCarbonKg ?? 0)
+  const avgDaily = Number(data?.averageDailyKg ?? 0)
 
   const countActivity = useCountUp(activityCount, 1, 0.3)
   const countMonthly = useCountUp(totalCarbon, 1, 0.4)
+
+  const topCatLabel = topCategory
+    ? topCategory.category.charAt(0) + topCategory.category.slice(1).toLowerCase()
+    : null
+
+  const activityMessage = activityCount > 0
+    ? activityCount <= 3
+      ? 'Just getting started — upload more to see patterns'
+      : 'activities tracked across your recent inputs'
+    : 'Upload receipts and I\'ll start counting'
+
+  const topSourceMessage = topCategory
+    ? `Your biggest source — ${Number(topCategory.carbonKg ?? 0).toFixed(1)} kg from ${topCatLabel}`
+    : 'Your dominant category will appear here'
+
+  const monthlyMessage = activityCount > 0
+    ? avgDaily < 5
+      ? 'Looking good — well under typical daily benchmarks'
+      : `~${avgDaily.toFixed(1)} kg/day — let's see if we can bring that down`
+    : 'Your total impact will show here'
 
   if (loading) {
     return (
@@ -107,10 +141,6 @@ export default function QuickInsights() {
     )
   }
 
-  const topCatLabel = topCategory
-    ? topCategory.category.charAt(0) + topCategory.category.slice(1).toLowerCase()
-    : '—'
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <InsightCard
@@ -118,23 +148,23 @@ export default function QuickInsights() {
         label="Activities"
         value={countActivity}
         isNumeric={activityCount > 0}
-        subtext={activityCount > 0 ? 'tracked so far' : 'Your journey awaits'}
+        message={activityMessage}
         delay={0}
       />
       <InsightCard
         icon={<Flame className="w-5 h-5" />}
         label="Biggest Source"
-        value={topCatLabel}
+        value={topCatLabel ?? '—'}
         isNumeric={false}
-        subtext={topCategory ? `${Number(topCategory.carbonKg ?? 0).toFixed(1)} kg CO₂e` : 'Upload to discover'}
+        message={topSourceMessage}
         delay={0.06}
       />
       <InsightCard
         icon={<Calendar className="w-5 h-5" />}
-        label="Monthly Carbon"
+        label="Total Footprint"
         value={activityCount > 0 ? countMonthly : '—'}
         isNumeric={activityCount > 0}
-        subtext={activityCount > 0 ? `~${avgDaily.toFixed(1)} kg/day average` : 'Your impact will appear here'}
+        message={monthlyMessage}
         delay={0.12}
       />
     </div>

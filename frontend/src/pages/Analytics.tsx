@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Leaf, BarChart3, Clock, Trophy, Flame } from 'lucide-react'
+import { Leaf, BarChart3, Clock, Trophy, MessageCircle, Sparkles } from 'lucide-react'
 import { getCarbonAnalytics, getCarbonInsights } from '@/api/services'
 import type { CarbonAnalyticsResponse, CarbonInsightResponse } from '@/types/activity'
 import { equivalents, stagger, fadeUp } from './insights/constants'
@@ -10,6 +10,20 @@ import MonthlyTrend from './insights/MonthlyTrend'
 import CategoryBreakdown from './insights/CategoryBreakdown'
 import ActivityTimeline from './insights/ActivityTimeline'
 import AchievementBadges from './insights/AchievementBadges'
+
+function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+        {icon}
+      </div>
+      <div>
+        <h2 className="text-sm font-semibold text-ink">{title}</h2>
+        <p className="text-[11px] text-ink-muted">{subtitle}</p>
+      </div>
+    </div>
+  )
+}
 
 export default function Analytics() {
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
@@ -48,161 +62,155 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="card flex flex-col items-center py-10">
-          <div className="skeleton w-44 h-44 rounded-full mb-4" />
-          <div className="skeleton w-32 h-4" />
-        </div>
-        <div className="card">
-          <div className="skeleton w-40 h-5 mb-6" />
-          <div className="flex gap-3 h-32">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex-1 skeleton rounded-xl" />
-            ))}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="card flex flex-col items-center py-8">
+            <div className="skeleton w-40 h-40 rounded-full mb-4" />
+            <div className="skeleton w-28 h-4" />
+          </div>
+          <div className="card">
+            <div className="skeleton w-32 h-5 mb-4" />
+            <div className="grid grid-cols-2 gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="skeleton h-20 rounded-xl" />
+              ))}
+            </div>
           </div>
         </div>
-        <div className="card space-y-4">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="skeleton w-9 h-9 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <div className="skeleton w-24 h-3" />
-                <div className="skeleton w-full h-2 rounded-full" />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="card">
+            <div className="skeleton w-36 h-5 mb-4" />
+            <div className="flex gap-2 h-28">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex-1 skeleton rounded-xl" />
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="card space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="skeleton w-8 h-8 rounded-lg" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="skeleton w-20 h-2.5" />
+                  <div className="skeleton w-full h-1.5 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="space-y-4">
       <motion.div variants={stagger} initial="hidden" animate="show">
 
-        {/* ── Carbon Score ──────────────────────────────────────────── */}
-        <motion.div variants={fadeUp} className="card flex flex-col items-center py-10 mb-6">
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-5">
-            Your Carbon Score
-          </p>
-          <CarbonScore kg={totalKg} />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-            className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm text-ink-muted"
-          >
-            {avgDaily > 0 ? (
-              <>
-                <span>~{avgDaily.toFixed(1)} kg per day</span>
-                <span className="w-1 h-1 rounded-full bg-ink-faint" />
-                <span>{analytics?.activityCount ?? 0} activities</span>
-              </>
-            ) : (
-              <span>Upload receipts to see your score</span>
-            )}
-          </motion.div>
+        {/* ── Row 1: Carbon Score + Equivalents ────────────────────── */}
+        <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <div className="card flex flex-col items-center py-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                Your Carbon Score
+              </p>
+            </div>
+            <CarbonScore kg={totalKg} />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-ink-muted"
+            >
+              {avgDaily > 0 ? (
+                <>
+                  <span>~{avgDaily.toFixed(1)} kg per day</span>
+                  <span className="w-1 h-1 rounded-full bg-ink-faint" />
+                  <span>{analytics?.activityCount ?? 0} activities</span>
+                </>
+              ) : (
+                <span>Upload receipts to see your score</span>
+              )}
+            </motion.div>
+          </div>
+
+          {hasData ? (
+            <div className="card">
+              <SectionHeader
+                icon={<Leaf className="w-4 h-4 text-emerald-600" />}
+                title="What does this actually mean?"
+                subtitle="Your carbon in terms you can relate to"
+              />
+              <ImpactEquivalents equivalents={equivalents} totalKg={totalKg} />
+            </div>
+          ) : (
+            <div className="card flex items-center justify-center">
+              <div className="text-center py-6">
+                <motion.div
+                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-50 to-leaf-50 border border-emerald-100/50 flex items-center justify-center mx-auto mb-4"
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <span className="text-3xl">📊</span>
+                </motion.div>
+                <h3 className="text-base font-semibold text-ink mb-1">Your insights await</h3>
+                <p className="text-xs text-ink-muted max-w-[200px] mx-auto leading-relaxed">
+                  Upload a receipt to see your carbon score and equivalents.
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
 
-        {/* ── Environmental Equivalents ─────────────────────────────── */}
-        {!hasData && (
-          <motion.div variants={fadeUp} className="card mb-6">
-            <div className="text-center py-10">
-              <motion.div
-                className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-50 to-leaf-50 border border-emerald-100/50 flex items-center justify-center mx-auto mb-5"
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <span className="text-4xl">📊</span>
-              </motion.div>
-              <h3 className="text-lg font-semibold text-ink mb-1.5">Your insights await</h3>
-              <p className="text-sm text-ink-muted max-w-xs mx-auto leading-relaxed mb-6">
-                Upload your first receipt and we'll paint a picture of your environmental impact.
-              </p>
-              <p className="text-xs text-ink-faint">
-                Carbon score · Environmental equivalents · Category breakdown · Monthly trends
-              </p>
+        {/* ── Row 2: Monthly Trend + Category Breakdown ────────────── */}
+        <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {monthly.length > 0 && (
+            <div className="card">
+              <SectionHeader
+                icon={<BarChart3 className="w-4 h-4 text-emerald-600" />}
+                title="How you're trending"
+                subtitle="Your emissions over time"
+              />
+              <MonthlyTrend monthly={monthly} maxKg={maxMonthKg} />
             </div>
-          </motion.div>
-        )}
-        {hasData && (
-          <motion.div variants={fadeUp} className="mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-ink">What does this mean?</h2>
-                <p className="text-xs text-ink-muted">Your carbon in relatable terms</p>
-              </div>
-            </div>
-            <ImpactEquivalents equivalents={equivalents} totalKg={totalKg} />
-          </motion.div>
-        )}
+          )}
 
-        {/* ── Monthly Trend ─────────────────────────────────────────── */}
-        {monthly.length > 0 && (
-          <motion.div variants={fadeUp} className="card mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-ink">Monthly Trend</h2>
-                <p className="text-xs text-ink-muted">Your emissions over time</p>
-              </div>
+          {categories.length > 0 && (
+            <div className="card">
+              <SectionHeader
+                icon={<MessageCircle className="w-4 h-4 text-emerald-600" />}
+                title="Where your emissions come from"
+                subtitle="The categories that matter most"
+              />
+              <CategoryBreakdown categories={categories} maxKg={maxCatKg} />
             </div>
-            <MonthlyTrend monthly={monthly} maxKg={maxMonthKg} />
-          </motion.div>
-        )}
+          )}
+        </motion.div>
 
-        {/* ── Category Breakdown ────────────────────────────────────── */}
-        {categories.length > 0 && (
-          <motion.div variants={fadeUp} className="card mb-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                <Flame className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-ink">Category Breakdown</h2>
-                <p className="text-xs text-ink-muted">Where your emissions come from</p>
-              </div>
+        {/* ── Row 3: Achievements + Activity Timeline ──────────────── */}
+        <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {achievements.length > 0 && (
+            <div className="card">
+              <SectionHeader
+                icon={<Trophy className="w-4 h-4 text-amber-600" />}
+                title="What I'm proud of you for"
+                subtitle="Milestones worth celebrating"
+              />
+              <AchievementBadges achievements={achievements} />
             </div>
-            <CategoryBreakdown categories={categories} maxKg={maxCatKg} />
-          </motion.div>
-        )}
+          )}
 
-        {/* ── Achievements ──────────────────────────────────────────── */}
-        {achievements.length > 0 && (
-          <motion.div variants={fadeUp} className="card mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-ink">Achievements</h2>
-                <p className="text-xs text-ink-muted">Milestones you&apos;ve reached</p>
-              </div>
+          {activities.length > 0 && (
+            <div className="card">
+              <SectionHeader
+                icon={<Clock className="w-4 h-4 text-emerald-600" />}
+                title="Your recent activities"
+                subtitle="What I've been tracking"
+              />
+              <ActivityTimeline activities={activities.slice(0, 6)} />
             </div>
-            <AchievementBadges achievements={achievements} />
-          </motion.div>
-        )}
-
-        {/* ── Activity Timeline ─────────────────────────────────────── */}
-        {activities.length > 0 && (
-          <motion.div variants={fadeUp} className="card mb-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-ink">Recent Activity</h2>
-                <p className="text-xs text-ink-muted">Your latest tracked emissions</p>
-              </div>
-            </div>
-            <ActivityTimeline activities={activities.slice(0, 8)} />
-          </motion.div>
-        )}
+          )}
+        </motion.div>
 
       </motion.div>
     </div>

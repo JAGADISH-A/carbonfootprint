@@ -45,19 +45,24 @@ public class EmissionFactorSeeder implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
-        log.info("EmissionFactorSeeder — checking if '{}' collection needs seeding...", collectionName);
+    public void run(String... args) {
+        try {
+            log.info("EmissionFactorSeeder — checking if '{}' collection needs seeding...", collectionName);
 
-        if (isCollectionPopulated()) {
-            log.info("EmissionFactorSeeder — collection '{}' already has data, skipping seed.",
-                    collectionName);
-            return;
+            if (isCollectionPopulated()) {
+                log.info("EmissionFactorSeeder — collection '{}' already has data, skipping seed.",
+                        collectionName);
+                return;
+            }
+
+            List<EmissionFactor> defaults = defaultEmissionFactors();
+            insertAll(defaults);
+            log.info("EmissionFactorSeeder — seeded {} default emission factors into '{}'.",
+                    defaults.size(), collectionName);
+        } catch (Exception e) {
+            log.warn("EmissionFactorSeeder — seeding failed (Firestore may be unavailable). " +
+                    "Application will continue without seed data: {}", e.getMessage());
         }
-
-        List<EmissionFactor> defaults = defaultEmissionFactors();
-        insertAll(defaults);
-        log.info("EmissionFactorSeeder — seeded {} default emission factors into '{}'.",
-                defaults.size(), collectionName);
     }
 
     // ── Collection check ──────────────────────────────────────────────────
@@ -78,21 +83,26 @@ public class EmissionFactorSeeder implements CommandLineRunner {
     // ── Insert ────────────────────────────────────────────────────────────
 
     private void insertAll(List<EmissionFactor> factors) {
+        int successCount = 0;
         for (EmissionFactor factor : factors) {
             try {
                 firestore.collection(collectionName)
                         .document(factor.getId())
                         .set(toFirestoreMap(factor))
                         .get();
+                successCount++;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.error("EmissionFactorSeeder — interrupted while inserting factor '{}'", factor.getId());
-                throw new RuntimeException("Seeder interrupted", e);
+                log.error("EmissionFactorSeeder — interrupted while inserting factor '{}', aborting remaining inserts",
+                        factor.getId());
+                break;
             } catch (ExecutionException e) {
                 log.error("EmissionFactorSeeder — failed to insert factor '{}': {}",
                         factor.getId(), e.getCause().getMessage());
-                throw new RuntimeException("Seeder insert failed for " + factor.getId(), e.getCause());
             }
+        }
+        if (successCount == 0 && !factors.isEmpty()) {
+            throw new RuntimeException("Failed to insert any emission factors — Firestore may be unavailable");
         }
     }
 

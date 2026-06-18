@@ -24,9 +24,9 @@ export default function UploadCTA() {
       </motion.div>
 
       <div className="flex-1">
-        <h3 className="text-base font-semibold text-ink mb-0.5">Upload a Receipt</h3>
+        <h3 className="text-base font-semibold text-ink mb-0.5">Got a receipt?</h3>
         <p className="text-sm text-ink-muted">
-          Every receipt helps improve your footprint analysis.
+          Drop it in and I'll analyze your carbon footprint in seconds.
         </p>
       </div>
 

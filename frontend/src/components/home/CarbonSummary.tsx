@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
-import { TrendingDown, TrendingUp } from 'lucide-react'
+import { TrendingDown, TrendingUp, Sparkles } from 'lucide-react'
 import { getCarbonAnalytics } from '@/api/services'
 import type { CarbonAnalyticsResponse } from '@/types/activity'
 
@@ -25,7 +25,7 @@ function CircularProgress({ percentage }: { percentage: number }) {
   const offset = circumference - (percentage / 100) * circumference
 
   return (
-    <div className="relative w-36 h-36">
+    <div className="relative w-32 h-32">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
         <circle
           cx="64"
@@ -93,9 +93,13 @@ export default function CarbonSummary() {
   const displayCarbon = useCountUp(totalCarbon, 1.2, 0.5)
   const percentage = hasData ? Math.min(Math.round((avgDaily / 25) * 100), 100) : 0
 
-  const encouragement = hasData
-    ? 'You\'re doing better than last week. Keep it up!'
-    : 'Start tracking to see your carbon impact here.'
+  const coachMessage = hasData
+    ? avgDaily < 5
+      ? "You're doing really well — your daily average is under 5 kg. That's below most benchmarks."
+      : avgDaily < 15
+        ? "Your daily average is moderate. There's room to bring it down, but you're not far off."
+        : "Your daily average is on the higher side. Let's see where we can make some easy cuts."
+    : "Once you upload a receipt, I'll start tracking your footprint and giving you personalized tips."
 
   if (loading) {
     return (
@@ -103,7 +107,7 @@ export default function CarbonSummary() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="card flex flex-col items-center py-10"
+        className="card flex flex-col items-center py-6"
       >
         <div className="skeleton w-36 h-36 rounded-full mb-6" />
         <div className="skeleton w-40 h-8 mb-3" />
@@ -117,16 +121,19 @@ export default function CarbonSummary() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-      className="card flex flex-col items-center text-center py-10"
+      className="card flex flex-col items-center text-center py-6"
     >
-      <motion.p
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.4 }}
-        className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-4"
+        className="flex items-center gap-2 mb-4"
       >
-        Today&apos;s Carbon
-      </motion.p>
+        <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+        <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+          Your Footprint
+        </p>
+      </motion.div>
 
       <CircularProgress percentage={percentage} />
 
@@ -153,10 +160,14 @@ export default function CarbonSummary() {
             animate={{ y: [0, -2, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <TrendingDown className="w-4 h-4 text-emerald-500" />
+            {avgDaily < 20 ? (
+              <TrendingDown className="w-4 h-4 text-emerald-500" />
+            ) : (
+              <TrendingUp className="w-4 h-4 text-amber-500" />
+            )}
           </motion.div>
-          <span className="text-sm font-medium text-emerald-600">
-            {Math.abs(Math.round(((avgDaily - 20) / 20) * 100))}% compared to last week
+          <span className={`text-sm font-medium ${avgDaily < 20 ? 'text-emerald-600' : 'text-amber-600'}`}>
+            ~{avgDaily.toFixed(1)} kg/day average
           </span>
         </motion.div>
       ) : (
@@ -175,9 +186,9 @@ export default function CarbonSummary() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2, duration: 0.5 }}
-        className="text-sm text-ink-muted italic max-w-xs"
+        className="text-sm text-ink-muted max-w-xs leading-relaxed"
       >
-        &ldquo;{encouragement}&rdquo;
+        {coachMessage}
       </motion.p>
     </motion.div>
   )
