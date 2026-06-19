@@ -1,0 +1,3 @@
+-keepattributes *Annotation*
+-keep class com.carbonwise.connect.data.model.** { *; }
+-keep class com.carbonwise.connect.data.remote.** { *; }
