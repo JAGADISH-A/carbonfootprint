@@ -181,6 +181,15 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp?: number
+  cards?: ChatCardData[]
+}
+
+export interface ChatCardData {
+  title: string
+  value: string
+  description: string
+  icon: string
+  color: string
 }
 
 export interface ChatRequest {
@@ -189,4 +198,5 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   reply: string
+  cards?: ChatCardData[]
 }

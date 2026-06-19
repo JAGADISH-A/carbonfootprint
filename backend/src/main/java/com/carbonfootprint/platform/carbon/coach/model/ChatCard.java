@@ -6,16 +6,16 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ChatResponse {
+public class ChatCard {
 
-    private String reply;
-
-    private List<ChatCard> cards;
+    private String title;
+    private String value;
+    private String description;
+    private String icon;
+    private String color;
 }

@@ -67,6 +67,7 @@ export default function CoachChat({ enabled }: CoachChatProps) {
               role: 'assistant',
               content: response.data!.reply,
               timestamp: Date.now(),
+              cards: response.data!.cards,
             },
           ])
         } else {
@@ -109,10 +110,8 @@ export default function CoachChat({ enabled }: CoachChatProps) {
 
   const handleRegenerate = async () => {
     if (loading) return
-
     const lastUserIdx = messages.findLastIndex((m) => m.role === 'user')
     if (lastUserIdx === -1) return
-
     const msgsUpToLastUser = messages.slice(0, lastUserIdx + 1)
     setMessages(msgsUpToLastUser)
     await sendMessage(msgsUpToLastUser)
@@ -125,9 +124,9 @@ export default function CoachChat({ enabled }: CoachChatProps) {
     messages[messages.length - 1].role === 'assistant'
 
   return (
-    <div className="flex flex-col h-full bg-surface/50 rounded-2xl border border-border-light overflow-hidden">
+    <div className="flex flex-col h-full bg-surface/50 rounded-xl border border-border-light overflow-hidden">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-0">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         {messages.map((msg, i) => (
           <ChatMessage
             key={`${i}-${msg.timestamp}`}
@@ -145,30 +144,30 @@ export default function CoachChat({ enabled }: CoachChatProps) {
       <AnimatePresence>
         {showSuggestions && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4, transition: { duration: 0.2 } }}
-            transition={{ duration: 0.4, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="px-4 pb-2"
+            exit={{ opacity: 0, y: 3, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.3, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="px-3 pb-2"
           >
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3 h-3 text-emerald-500" />
-              <span className="text-[10px] font-medium text-ink-muted uppercase tracking-wider">
-                Suggested questions
+            <div className="flex items-center gap-1 mb-1.5">
+              <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+              <span className="text-[9px] font-medium text-ink-muted uppercase tracking-wider">
+                Suggested
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {SUGGESTED_QUESTIONS.map((q, i) => (
                 <motion.button
                   key={q}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.7 + i * 0.04 }}
-                  whileHover={{ scale: 1.03, y: -1 }}
+                  transition={{ duration: 0.2, delay: 0.5 + i * 0.03 }}
+                  whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => handleSend(q)}
                   disabled={!enabled}
-                  className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {q}
                 </motion.button>
@@ -178,24 +177,24 @@ export default function CoachChat({ enabled }: CoachChatProps) {
         )}
       </AnimatePresence>
 
-      {/* Regenerate bar */}
+      {/* Regenerate */}
       <AnimatePresence>
         {canRegenerate && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="px-4 overflow-hidden"
+            className="px-3 overflow-hidden"
           >
-            <div className="flex justify-center pb-2">
+            <div className="flex justify-center pb-1.5">
               <motion.button
                 onClick={handleRegenerate}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-ink-muted hover:text-emerald-600 bg-white border border-border-light hover:border-emerald-200 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium text-ink-muted hover:text-emerald-600 bg-white border border-border-light hover:border-emerald-200 transition-colors"
               >
-                <RefreshCw className="w-3 h-3" />
-                Regenerate response
+                <RefreshCw className="w-2.5 h-2.5" />
+                Regenerate
               </motion.button>
             </div>
           </motion.div>
