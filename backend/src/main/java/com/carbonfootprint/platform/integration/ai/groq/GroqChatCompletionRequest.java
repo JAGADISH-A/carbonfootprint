@@ -45,4 +45,14 @@ public class GroqChatCompletionRequest {
                 .responseFormat(new ResponseFormat("json_object"))
                 .build();
     }
+
+    public static GroqChatCompletionRequest chat(String model, List<GroqMessage> messages,
+                                                  Double temperature, Integer maxTokens) {
+        return GroqChatCompletionRequest.builder()
+                .model(model)
+                .messages(messages)
+                .temperature(temperature)
+                .maxTokens(maxTokens)
+                .build();
+    }
 }

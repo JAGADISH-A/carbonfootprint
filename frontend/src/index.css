@@ -79,7 +79,7 @@ body {
   }
 
   .page-container {
-    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5;
+    @apply w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-5;
   }
 
   .skeleton {

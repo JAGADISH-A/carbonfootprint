@@ -23,7 +23,7 @@ export default function SuccessCelebration({
 
   useEffect(() => {
     if (onAutoRedirect) {
-      const timer = setTimeout(onAutoRedirect, 8000)
+      const timer = setTimeout(onAutoRedirect, 3000)
       return () => clearTimeout(timer)
     }
   }, [onAutoRedirect])
@@ -156,7 +156,7 @@ export default function SuccessCelebration({
         transition={{ delay: 1 }}
         className="text-[11px] text-ink-faint mt-4"
       >
-        Auto-redirecting to dashboard in a few seconds...
+        Auto-redirecting to AI Coach...
       </motion.p>
     </motion.div>
   )

@@ -5,6 +5,8 @@ import type {
   CarbonInsightResponse,
   AICarbonCoachResponse,
   ReceiptUploadResponse,
+  ChatRequest,
+  ChatResponse,
 } from '@/types/activity'
 
 export async function getCarbonAnalytics(params?: {
@@ -56,6 +58,18 @@ export async function uploadReceipt(
     {
       headers: { 'Content-Type': 'multipart/form-data' },
     }
+  )
+  return response.data
+}
+
+export async function sendChatMessage(
+  request: ChatRequest,
+  signal?: AbortSignal
+): Promise<ApiResponse<ChatResponse>> {
+  const response = await apiClient.post<ApiResponse<ChatResponse>>(
+    '/api/v1/carbon/chat',
+    request,
+    { signal }
   )
   return response.data
 }

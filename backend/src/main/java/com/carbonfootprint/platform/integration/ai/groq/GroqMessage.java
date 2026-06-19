@@ -23,4 +23,8 @@ public class GroqMessage {
     public static GroqMessage user(String content) {
         return new GroqMessage("user", content);
     }
+
+    public static GroqMessage assistant(String content) {
+        return new GroqMessage("assistant", content);
+    }
 }

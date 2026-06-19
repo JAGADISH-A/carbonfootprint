@@ -218,14 +218,14 @@ export default function UploadPage() {
   }, [])
 
   const handleNavigate = useCallback(() => {
-    navigate('/')
+    navigate('/coach')
   }, [navigate])
 
   const isProcessing = phase === 'processing'
   const detectedFields = buildDetectedFields(previewData)
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

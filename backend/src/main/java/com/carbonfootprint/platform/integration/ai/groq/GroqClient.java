@@ -171,6 +171,39 @@ public class GroqClient {
         return rawResponseBody;
     }
 
+    /**
+     * Sends a multi-message conversation to the Groq API with a custom model.
+     * Used for conversational chat where the full message history is provided.
+     * Does NOT force JSON response format.
+     *
+     * @param model    the model identifier to use
+     * @param messages the full conversation (system + user + assistant messages)
+     * @return the raw Groq API response body
+     * @throws IngestionException on failure
+     */
+    public String generateMessages(String model, List<GroqMessage> messages) throws IngestionException {
+        if (messages == null || messages.isEmpty()) {
+            throw new AiProviderException("Messages must not be null or empty", 0);
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new AiProviderException("Groq API key is not configured", 0);
+        }
+
+        log.debug("GroqClient.generateMessages() — model={} messageCount={}", model, messages.size());
+
+        GroqChatCompletionRequest requestBody = GroqChatCompletionRequest.chat(
+                model, messages, 0.7, 2048);
+
+        Instant start = Instant.now();
+        String rawResponseBody = executeWithRetry(requestBody);
+        long latencyMs = Duration.between(start, Instant.now()).toMillis();
+
+        log.info("Groq API chat call completed — model={} latencyMs={} responseSize={}",
+                model, latencyMs, rawResponseBody != null ? rawResponseBody.length() : 0);
+
+        return rawResponseBody;
+    }
+
     private String executeWithRetry(GroqChatCompletionRequest requestBody) throws IngestionException {
         int lastRetryableStatus = 0;
 
