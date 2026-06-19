@@ -113,23 +113,6 @@ public class GroqClient {
     }
 
     /**
-     * Sends the given prompt to the Groq API with a custom system message
-     * and the default model.
-     * Retries on transient failures (408, 429, 5xx, connection/timeout errors)
-     * with exponential backoff.
-     *
-     * @param systemMessage the system-level instruction for the model
-     * @param userPrompt    the user message content
-     * @return the raw Groq API response body
-     * @throws AiQuotaExceededException  if 429 after retries exhausted
-     * @throws AiTimeoutException        if 408 / connection timeout after retries exhausted
-     * @throws AiProviderException       if 5xx after retries, non-retryable 4xx, or config error
-     */
-    public String generateContent(String systemMessage, String userPrompt) throws IngestionException {
-        return generateContent(defaultModel, systemMessage, userPrompt);
-    }
-
-    /**
      * Sends the given prompt to the Groq API with a custom system message and model.
      * Retries on transient failures (408, 429, 5xx, connection/timeout errors)
      * with exponential backoff.
@@ -189,10 +172,21 @@ public class GroqClient {
             throw new AiProviderException("Groq API key is not configured", 0);
         }
 
-        log.debug("GroqClient.generateMessages() — model={} messageCount={}", model, messages.size());
+        log.info("GroqClient.generateMessages() — model={} messageCount={}", model, messages.size());
+        for (int i = 0; i < messages.size(); i++) {
+            GroqMessage m = messages.get(i);
+            String preview = m.getContent() != null && m.getContent().length() > 120
+                    ? m.getContent().substring(0, 120) + "..."
+                    : m.getContent();
+            log.debug("GroqClient.generateMessages() — message[{}] role={} content={}",
+                    i, m.getRole(), preview);
+        }
 
         GroqChatCompletionRequest requestBody = GroqChatCompletionRequest.chat(
                 model, messages, 0.7, 2048);
+
+        log.debug("GroqClient.generateMessages() — request body responseFormat={}",
+                requestBody.getResponseFormat());
 
         Instant start = Instant.now();
         String rawResponseBody = executeWithRetry(requestBody);
@@ -220,6 +214,8 @@ public class GroqClient {
                     throw new AiProviderException("Groq API returned empty response", 0);
                 }
 
+                log.debug("Groq API attempt {}/{} succeeded — responseSize={}", attempt, MAX_RETRIES,
+                        responseBody.length());
                 return responseBody;
 
             } catch (IngestionException e) {

@@ -55,38 +55,69 @@ export default function CoachChat({ enabled }: CoachChatProps) {
       abortRef.current = controller
 
       try {
+        console.log('[Chat] Sending request:', {
+          messageCount: msgs.length,
+          roles: msgs.map((m) => m.role),
+        })
+
         const response = await sendChatMessage(
           { messages: msgs },
           controller.signal
         )
 
+        console.log('[Chat] Response received:', {
+          success: response.success,
+          hasData: !!response.data,
+          replyLength: response.data?.reply?.length ?? 0,
+          cardCount: response.data?.cards?.length ?? 0,
+        })
+
         if (response.success && response.data) {
+          const reply = response.data.reply || "I couldn't generate a response."
           setMessages((prev) => [
             ...prev,
             {
               role: 'assistant',
-              content: response.data!.reply,
+              content: reply,
               timestamp: Date.now(),
               cards: response.data!.cards,
             },
           ])
         } else {
+          // Backend returned 200 but success=false — show backend message
+          const errorMsg = response.message || 'Something went wrong. Please try again.'
+          console.warn('[Chat] Backend returned success=false:', response)
           setMessages((prev) => [
             ...prev,
             {
               role: 'assistant',
-              content: 'Something went wrong. Please try again.',
+              content: errorMsg,
               timestamp: Date.now(),
             },
           ])
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return
+
+        // Extract meaningful error from Axios or network error
+        let errorMessage = 'Connection error. Please check your network and try again.'
+        const axiosErr = err as Record<string, unknown>
+        if (axiosErr.userMessage) {
+          errorMessage = String(axiosErr.userMessage)
+        } else if (err instanceof Error && err.message) {
+          if (err.message.includes('timeout')) {
+            errorMessage = 'The request timed out. The AI is taking longer than usual — please try again.'
+          } else if (err.message.includes('Network Error')) {
+            errorMessage = 'Network error. Please check your connection and try again.'
+          }
+        }
+
+        console.error('[Chat] Error:', err)
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: 'Connection error. Please check your network and try again.',
+            content: errorMessage,
             timestamp: Date.now(),
           },
         ])

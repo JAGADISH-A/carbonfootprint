@@ -33,8 +33,22 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse<unknown>>) => response,
   (error) => {
-    // Log and re-throw for component-level handling
-    console.error('[API Error]', error.response?.data ?? error.message)
+    // Extract meaningful error message from backend ApiResponse envelope
+    const status = error.response?.status
+    const body = error.response?.data
+
+    let message = error.message
+    if (body && typeof body === 'object') {
+      // Backend returns ApiResponse { success, message, errorCode, ... }
+      message = body.message || body.errorCode || `Server error (${status})`
+    } else if (status) {
+      message = `Server error (${status})`
+    }
+
+    console.error(`[API Error] ${error.config?.url ?? ''}`, { status, message, body })
+
+    // Attach readable message to the error so callers can display it
+    ;(error as Record<string, unknown>).userMessage = message
     return Promise.reject(error)
   }
 )

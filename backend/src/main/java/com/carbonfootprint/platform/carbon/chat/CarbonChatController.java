@@ -32,11 +32,21 @@ public class CarbonChatController {
             @Valid @RequestBody ChatRequest request) {
 
         String userId = getCurrentUserId();
-        log.debug("Chat request: userId={} messageCount={}", userId,
+        log.info("Chat request received: userId={} messageCount={}", userId,
                 request.getMessages() != null ? request.getMessages().size() : 0);
 
-        ChatResponse response = carbonChatService.chat(userId, request);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            ChatResponse response = carbonChatService.chat(userId, request);
+            log.info("Chat response sent: replyLength={}",
+                    response.getReply() != null ? response.getReply().length() : 0);
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (Exception e) {
+            log.error("Chat endpoint error: userId={} error={}", userId, e.getMessage(), e);
+            ChatResponse fallback = ChatResponse.builder()
+                    .reply("I'm experiencing a temporary issue. Please try again in a moment.")
+                    .build();
+            return ResponseEntity.ok(ApiResponse.success(fallback));
+        }
     }
 
     private String getCurrentUserId() {

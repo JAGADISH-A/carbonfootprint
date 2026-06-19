@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, RefreshCw } from 'lucide-react'
+import { ArrowRight, RefreshCw, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
 import { getAICoach, getCarbonAnalytics } from '@/api/services'
 import type { AICarbonCoachResponse, CarbonAnalyticsResponse } from '@/types/activity'
 import { CarbonSummaryPanel, CoachChat } from '@/components/coach'
@@ -16,6 +16,7 @@ export default function Coach() {
   const [coach, setCoach] = useState<AICarbonCoachResponse | null>(null)
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [summaryOpen, setSummaryOpen] = useState(false)
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
@@ -111,28 +112,53 @@ export default function Coach() {
           </div>
         </div>
 
-        <motion.button
-          onClick={fetchData}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"
-        >
-          <RefreshCw className="w-2.5 h-2.5" />
-          Refresh
-        </motion.button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSummaryOpen(!summaryOpen)}
+            className="lg:hidden text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"
+          >
+            <BarChart3 className="w-2.5 h-2.5" />
+            {summaryOpen ? 'Hide' : 'Data'}
+          </button>
+
+          <motion.button
+            onClick={fetchData}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"
+          >
+            <RefreshCw className="w-2.5 h-2.5" />
+            Refresh
+          </motion.button>
+        </div>
       </motion.div>
 
-      {/* Two-column layout */}
+      {/* Mobile/Tablet: Summary (collapsible) */}
+      <div className="lg:hidden">
+        <motion.div
+          initial={false}
+          animate={{ height: summaryOpen ? 'auto' : 0 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-hidden border-b border-border-light bg-white/60"
+        >
+          <div className="p-3 max-h-[50vh] overflow-y-auto">
+            <CarbonSummaryPanel coach={coach} analytics={analytics} loading={loading} />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Desktop: Summary (always visible) + Chat side by side */}
+      {/* Mobile/Tablet: Chat takes remaining height, input always visible */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Carbon Summary */}
-        <div className="w-[300px] xl:w-[340px] flex-shrink-0 border-r border-border-light bg-white/40 overflow-hidden">
-          <div className="h-full p-3">
+        {/* Desktop summary sidebar */}
+        <div className="hidden lg:block lg:w-[300px] xl:w-[340px] flex-shrink-0 border-r border-border-light bg-white/40 overflow-y-auto">
+          <div className="p-3">
             <CarbonSummaryPanel coach={coach} analytics={analytics} loading={loading} />
           </div>
         </div>
 
-        {/* Right: Chat */}
-        <div className="flex-1 min-w-0 p-3">
+        {/* Chat — always fills remaining space, input pinned to bottom */}
+        <div className="flex-1 min-w-0 p-3 flex flex-col overflow-hidden">
           <CoachChat enabled={hasData} />
         </div>
       </div>

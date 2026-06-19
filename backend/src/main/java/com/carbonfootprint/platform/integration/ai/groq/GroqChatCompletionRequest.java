@@ -53,6 +53,7 @@ public class GroqChatCompletionRequest {
                 .messages(messages)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
+                .responseFormat(null)
                 .build();
     }
 }

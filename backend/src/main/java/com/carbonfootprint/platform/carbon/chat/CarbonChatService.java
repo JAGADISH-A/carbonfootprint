@@ -33,9 +33,10 @@ public class CarbonChatService {
             You are EcoBuddy, a friendly and knowledgeable sustainability coach.
             You help users understand their carbon footprint based on their receipt data.
 
-            RESPONSE FORMAT:
-            You MUST respond with a JSON object. Do NOT output any text outside the JSON.
-            The JSON has two fields:
+            IMPORTANT: You MUST respond with valid JSON. Do NOT output any text outside the JSON.
+            The entire response must be a single JSON object containing the fields below.
+
+            The JSON object has two fields:
             - "reply": A short conversational message (1-3 sentences max). Use markdown for emphasis.
             - "cards": An array of analysis cards. Include cards ONLY when the user's question
               calls for data analysis. For general chat (greetings, simple questions), use an empty array.
@@ -94,7 +95,14 @@ public class CarbonChatService {
             return ChatResponse.builder().reply("Please send a message.").build();
         }
 
-        String contextBlock = buildAnalyticsContext(userId);
+        String contextBlock;
+        try {
+            contextBlock = buildAnalyticsContext(userId);
+        } catch (Exception e) {
+            log.warn("CarbonChatService — failed to build analytics context, proceeding without data: {}",
+                    e.getMessage());
+            contextBlock = "No carbon data available yet. The user hasn't uploaded any receipts.";
+        }
 
         List<GroqMessage> groqMessages = new ArrayList<>();
         groqMessages.add(GroqMessage.system(SYSTEM_PROMPT + "\n\n" + contextBlock));
@@ -110,12 +118,21 @@ public class CarbonChatService {
         }
 
         try {
+            log.info("CarbonChatService — sending chat request: model={} messageCount={}",
+                    coachModel, groqMessages.size());
             String rawResponse = groqClient.generateMessages(coachModel, groqMessages);
+            log.info("CarbonChatService — received chat response: responseSize={}",
+                    rawResponse != null ? rawResponse.length() : 0);
             return parseStructuredResponse(rawResponse);
         } catch (IngestionException e) {
-            log.warn("CarbonChatService — AI call failed: {}", e.getMessage());
+            log.warn("CarbonChatService — AI call failed (IngestionException): {}", e.getMessage());
             return ChatResponse.builder()
                     .reply("I'm having trouble connecting to my AI brain right now. Please try again in a moment.")
+                    .build();
+        } catch (Exception e) {
+            log.error("CarbonChatService — unexpected error during chat: {}", e.getMessage(), e);
+            return ChatResponse.builder()
+                    .reply("Something went wrong on my end. Please try again in a moment.")
                     .build();
         }
     }
