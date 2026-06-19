@@ -5,6 +5,8 @@ import com.carbonfootprint.platform.carbon.analytics.model.CategoryEmissionSumma
 import com.carbonfootprint.platform.carbon.analytics.model.TopEmissionActivity;
 import com.carbonfootprint.platform.carbon.coach.config.CoachCacheProperties;
 import com.carbonfootprint.platform.carbon.coach.model.AICarbonCoachResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CoachCacheServiceTest {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
+
     private CoachCacheProperties properties;
     private CoachCacheService cache;
 
@@ -24,7 +29,7 @@ class CoachCacheServiceTest {
         properties = new CoachCacheProperties();
         properties.setEnabled(true);
         properties.setTtlMinutes(60);
-        cache = new CoachCacheService(properties);
+        cache = new CoachCacheService(properties, OBJECT_MAPPER);
     }
 
     // ── Cache hit/miss ────────────────────────────────────────────────────
@@ -175,6 +180,49 @@ class CoachCacheServiceTest {
     }
 
     @Test
+    void computeHash_withInstantFields_serializesSuccessfully() {
+        CarbonAnalyticsResponse analytics = CarbonAnalyticsResponse.builder()
+                .activityCount(2)
+                .totalCarbonKg(new BigDecimal("10.0"))
+                .topActivities(List.of(
+                        TopEmissionActivity.builder()
+                                .activityId("act-1")
+                                .merchant("Test")
+                                .category("FUEL")
+                                .carbonKg(new BigDecimal("10.0"))
+                                .occurredAt(Instant.parse("2026-01-15T10:30:00Z"))
+                                .build()))
+                .build();
+
+        String hash = cache.computeHash(analytics);
+
+        assertThat(hash).isNotBlank();
+    }
+
+    @Test
+    void get_withInstantFields_roundTripsSuccessfully() {
+        CarbonAnalyticsResponse analytics = CarbonAnalyticsResponse.builder()
+                .activityCount(1)
+                .totalCarbonKg(new BigDecimal("5.0"))
+                .topActivities(List.of(
+                        TopEmissionActivity.builder()
+                                .activityId("act-1")
+                                .merchant("Test")
+                                .category("FUEL")
+                                .carbonKg(new BigDecimal("5.0"))
+                                .occurredAt(Instant.parse("2026-03-01T08:00:00Z"))
+                                .build()))
+                .build();
+        AICarbonCoachResponse response = sampleResponse();
+
+        cache.put("user-1", analytics, response);
+        AICarbonCoachResponse cached = cache.get("user-1", analytics);
+
+        assertThat(cached).isNotNull();
+        assertThat(cached.getSummary()).isEqualTo("AI summary");
+    }
+
+    @Test
     void computeHash_sortedCategories_producesSameHash() {
         CarbonAnalyticsResponse unsorted = CarbonAnalyticsResponse.builder()
                 .activityCount(5)
@@ -301,7 +349,10 @@ class CoachCacheServiceTest {
         cache.get("user-1", analytics);  // hit
         cache.get("user-1", analytics);  // hit
         cache.get("user-1", analytics);  // hit
-        cache.get("user-1", sampleAnalytics());  // miss (different analytics)
+        cache.get("user-1", CarbonAnalyticsResponse.builder()
+                .activityCount(10)
+                .totalCarbonKg(new BigDecimal("100.0"))
+                .build());  // miss (different analytics)
 
         CoachCacheStatistics stats = cache.getStatistics();
         assertThat(stats.hits()).isEqualTo(3);

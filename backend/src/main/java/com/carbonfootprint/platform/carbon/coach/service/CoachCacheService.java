@@ -46,13 +46,11 @@ import java.util.concurrent.atomic.LongAdder;
 @Slf4j
 public class CoachCacheService {
 
-    private static final ObjectMapper SORTED_MAPPER = new ObjectMapper()
-            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-
     private static final long STATS_LOG_INTERVAL = 100;
 
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final CoachCacheProperties properties;
+    private final ObjectMapper sortedMapper;
 
     // ── Counters ──────────────────────────────────────────────────────────
     private final LongAdder hits = new LongAdder();
@@ -61,8 +59,11 @@ public class CoachCacheService {
     private final LongAdder expiredRemovals = new LongAdder();
     private final AtomicLong operationCounter = new AtomicLong(0);
 
-    public CoachCacheService(CoachCacheProperties properties) {
+    public CoachCacheService(CoachCacheProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
+        this.sortedMapper = objectMapper.copy()
+                .configure(com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
     }
 
     /**
@@ -247,7 +248,7 @@ public class CoachCacheService {
     String computeHash(CarbonAnalyticsResponse analytics) {
         try {
             CarbonAnalyticsResponse canonical = canonicalize(analytics);
-            String json = SORTED_MAPPER.writeValueAsString(canonical);
+            String json = sortedMapper.writeValueAsString(canonical);
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(json.getBytes(StandardCharsets.UTF_8));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
