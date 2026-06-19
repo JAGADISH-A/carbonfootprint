@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,11 +30,11 @@ import java.util.Optional;
  *
  * <h3>Flow</h3>
  * Controller → {@link AICarbonCoachUseCase} → {@code AICarbonCoachService}
- *     → Gemini (with deterministic fallback)
+ *     → Groq (with deterministic fallback)
  *
  * <h3>Design</h3>
  * Thin controller — delegates all logic to the use case.
- * Gemini errors are handled by the service; this endpoint always succeeds.
+ * Groq errors are handled by the service; this endpoint always succeeds.
  *
  * <h3>Auth note</h3>
  * Currently uses a placeholder userId. Will be replaced with JWT subject claim
@@ -42,6 +43,7 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.CARBON_PATH)
+@Profile("!stub")
 @RequiredArgsConstructor
 @Tag(name = "AI Carbon Coach", description = "AI-powered personalized carbon emission coaching")
 public class AICarbonCoachController {

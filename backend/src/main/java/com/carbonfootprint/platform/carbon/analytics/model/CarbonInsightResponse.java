@@ -12,6 +12,7 @@ import java.util.List;
  *
  * <h3>Fields</h3>
  * <ul>
+ *   <li><strong>analytics</strong> — raw analytics data for structured prompt building</li>
  *   <li><strong>summary</strong> — one-paragraph human-readable overview</li>
  *   <li><strong>achievements</strong> — positive observations (e.g., low-emission month)</li>
  *   <li><strong>warnings</strong> — concerning patterns (e.g., high-emission category)</li>
@@ -28,6 +29,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CarbonInsightResponse {
+
+    private CarbonAnalyticsResponse analytics;
 
     private String summary;
 

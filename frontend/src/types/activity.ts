@@ -148,6 +148,7 @@ export interface AICarbonCoachResponse {
   recommendations: string[]
   weeklyChallenge: string
   motivation: string
+  confidence: number
   aiGenerated: boolean
   // Storytelling fields (new format)
   whatHappened?: string

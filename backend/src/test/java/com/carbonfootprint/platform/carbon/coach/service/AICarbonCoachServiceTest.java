@@ -1,17 +1,20 @@
 package com.carbonfootprint.platform.carbon.coach.service;
 
+import com.carbonfootprint.platform.carbon.analytics.model.CarbonAnalyticsResponse;
 import com.carbonfootprint.platform.carbon.analytics.model.CarbonInsightResponse;
 import com.carbonfootprint.platform.carbon.coach.model.AICarbonCoachResponse;
 import com.carbonfootprint.platform.carbon.coach.prompt.CarbonCoachPromptBuilder;
 import com.carbonfootprint.platform.carbon.port.in.CarbonInsightUseCase;
-import com.carbonfootprint.platform.integration.ai.gemini.GeminiClient;
-import com.carbonfootprint.platform.integration.ai.gemini.GeminiClientException;
+import com.carbonfootprint.platform.integration.ai.groq.GroqClient;
+import com.carbonfootprint.platform.platform.exception.IngestionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +23,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,18 +35,29 @@ class AICarbonCoachServiceTest {
     private CarbonInsightUseCase carbonInsightUseCase;
 
     @Mock
-    private GeminiClient geminiClient;
+    private GroqClient groqClient;
 
     @Mock
     private CarbonCoachPromptBuilder carbonCoachPromptBuilder;
 
+    @Mock
+    private CoachCacheService coachCacheService;
+
+    @Mock
+    private CoachConfidenceCalculator coachConfidenceCalculator;
+
     private AICarbonCoachService service;
 
     private static final String USER_ID = "user-001";
+    private static final String SYSTEM_PROMPT = "You are EcoBuddy.";
+    private static final String COACH_MODEL = "llama-3.3-70b-versatile";
 
     @BeforeEach
     void setUp() {
-        service = new AICarbonCoachService(carbonInsightUseCase, geminiClient, carbonCoachPromptBuilder);
+        service = new AICarbonCoachService(
+                carbonInsightUseCase, groqClient, carbonCoachPromptBuilder,
+                coachCacheService, coachConfidenceCalculator, COACH_MODEL);
+        lenient().when(coachConfidenceCalculator.calculate(any())).thenReturn(75);
     }
 
     // ── Collaboration verification ────────────────────────────────────────
@@ -50,8 +66,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_invokesCarbonInsightUseCase() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         service.generateCoach(USER_ID);
 
@@ -62,8 +80,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_invokesCarbonCoachPromptBuilder() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         service.generateCoach(USER_ID);
 
@@ -71,15 +91,35 @@ class AICarbonCoachServiceTest {
     }
 
     @Test
-    void generateCoach_invokesGeminiClient() throws Exception {
+    void generateCoach_invokesGroqClientWithSystemMessage() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         service.generateCoach(USER_ID);
 
-        verify(geminiClient).generateContent(eq("prompt"));
+        verify(groqClient).generateContent(eq(COACH_MODEL), eq(SYSTEM_PROMPT), eq("prompt"));
+    }
+
+    // ── Model selection ──────────────────────────────────────────────────
+
+    @Test
+    void generateCoach_usesCoachModel() throws Exception {
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
+        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
+
+        service.generateCoach(USER_ID);
+
+        ArgumentCaptor<String> modelCaptor = ArgumentCaptor.forClass(String.class);
+        verify(groqClient).generateContent(modelCaptor.capture(), eq(SYSTEM_PROMPT), eq("prompt"));
+        assertThat(modelCaptor.getValue()).isEqualTo(COACH_MODEL);
     }
 
     @Test
@@ -91,8 +131,10 @@ class AICarbonCoachServiceTest {
 
         when(carbonInsightUseCase.generateInsights(USER_ID, fromInstant, toInstant))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         service.generateCoach(USER_ID, from, to);
 
@@ -100,7 +142,7 @@ class AICarbonCoachServiceTest {
     }
 
     @Test
-    void generateCoach_withDateRange_invokesCarbonCoachPromptBuilder() throws Exception {
+    void generateCoach_withDateRange_invokesGroqClientWithSystemMessage() throws Exception {
         LocalDate from = LocalDate.of(2026, 1, 1);
         LocalDate to = LocalDate.of(2026, 1, 31);
         Instant fromInstant = Instant.parse("2026-01-01T00:00:00Z");
@@ -108,29 +150,14 @@ class AICarbonCoachServiceTest {
 
         when(carbonInsightUseCase.generateInsights(USER_ID, fromInstant, toInstant))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         service.generateCoach(USER_ID, from, to);
 
-        verify(carbonCoachPromptBuilder).build(any(CarbonInsightResponse.class));
-    }
-
-    @Test
-    void generateCoach_withDateRange_invokesGeminiClient() throws Exception {
-        LocalDate from = LocalDate.of(2026, 1, 1);
-        LocalDate to = LocalDate.of(2026, 1, 31);
-        Instant fromInstant = Instant.parse("2026-01-01T00:00:00Z");
-        Instant toInstant = Instant.parse("2026-02-01T00:00:00Z").minusNanos(1);
-
-        when(carbonInsightUseCase.generateInsights(USER_ID, fromInstant, toInstant))
-                .thenReturn(Optional.of(sampleInsight()));
-        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("AI summary");
-
-        service.generateCoach(USER_ID, from, to);
-
-        verify(geminiClient).generateContent(eq("prompt"));
+        verify(groqClient).generateContent(eq(COACH_MODEL), eq(SYSTEM_PROMPT), eq("prompt"));
     }
 
     // ── Empty / no data ───────────────────────────────────────────────────
@@ -160,14 +187,16 @@ class AICarbonCoachServiceTest {
         assertThat(result).isEmpty();
     }
 
-    // ── Gemini success ────────────────────────────────────────────────────
+    // ── AI success ────────────────────────────────────────────────────────
 
     @Test
-    void generateCoach_geminiSuccess_setsAiGeneratedTrue() throws Exception {
+    void generateCoach_aiSuccess_setsAiGeneratedTrue() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn(validJson());
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -175,11 +204,13 @@ class AICarbonCoachServiceTest {
     }
 
     @Test
-    void generateCoach_geminiSuccess_parsesAllFields() throws Exception {
+    void generateCoach_aiSuccess_parsesAllFields() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn(validJson());
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -197,8 +228,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_markdownWrappedJson_parsesCorrectly() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("""
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("""
                 ```json
                 {
                   "summary": "Fenced JSON response",
@@ -223,8 +256,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_malformedJson_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("not valid json {{{");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("not valid json {{{");
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -238,8 +273,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_missingFields_parsesWhatItCan() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("""
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("""
                 {
                   "summary": "Partial data",
                   "strengths": ["One strength"]
@@ -261,8 +298,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_emptyArrays_returnsEmptyLists() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("""
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("""
                 {
                   "summary": "All empty lists",
                   "strengths": [],
@@ -287,8 +326,10 @@ class AICarbonCoachServiceTest {
     void generateCoach_invalidJson_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("{invalid json");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("{invalid json");
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -296,14 +337,16 @@ class AICarbonCoachServiceTest {
         assertThat(response.getSummary()).isEqualTo("Your total footprint is 45.00 kg CO₂e.");
     }
 
-    // ── Empty summary from Gemini ─────────────────────────────────────────
+    // ── Empty summary from AI ─────────────────────────────────────────────
 
     @Test
     void generateCoach_emptySummary_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any())).thenReturn("""
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("""
                 {
                   "summary": "",
                   "strengths": ["S1"],
@@ -320,15 +363,17 @@ class AICarbonCoachServiceTest {
         assertThat(response.getSummary()).isEqualTo("Your total footprint is 45.00 kg CO₂e.");
     }
 
-    // ── Gemini exception ──────────────────────────────────────────────────
+    // ── AI exception ──────────────────────────────────────────────────────
 
     @Test
-    void generateCoach_geminiException_fallsBackToDeterministic() throws Exception {
+    void generateCoach_aiException_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any()))
-                .thenThrow(new GeminiClientException("Gemini API error"));
+        when(groqClient.generateContent(any(), any(), any()))
+                .thenThrow(new IngestionException("Groq API error"));
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -337,12 +382,14 @@ class AICarbonCoachServiceTest {
     }
 
     @Test
-    void generateCoach_geminiException_preservesAllFields() throws Exception {
+    void generateCoach_aiException_preservesAllFields() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any()))
-                .thenThrow(new GeminiClientException("API error"));
+        when(groqClient.generateContent(any(), any(), any()))
+                .thenThrow(new IngestionException("API error"));
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -353,15 +400,17 @@ class AICarbonCoachServiceTest {
         assertThat(response.getMotivation()).isNotBlank();
     }
 
-    // ── Gemini timeout ────────────────────────────────────────────────────
+    // ── AI timeout ────────────────────────────────────────────────────────
 
     @Test
-    void generateCoach_geminiTimeout_fallsBackToDeterministic() throws Exception {
+    void generateCoach_aiTimeout_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any()))
-                .thenThrow(new GeminiClientException("Connection failure or timeout when calling Gemini"));
+        when(groqClient.generateContent(any(), any(), any()))
+                .thenThrow(new IngestionException("Connection failure or timeout"));
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -375,9 +424,11 @@ class AICarbonCoachServiceTest {
     void generateCoach_quotaExceeded_fallsBackToDeterministic() throws Exception {
         when(carbonInsightUseCase.generateInsights(USER_ID))
                 .thenReturn(Optional.of(sampleInsight()));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
         when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
-        when(geminiClient.generateContent(any()))
-                .thenThrow(new GeminiClientException("Gemini API returned HTTP error: 429 Resource exhausted"));
+        when(groqClient.generateContent(any(), any(), any()))
+                .thenThrow(new IngestionException("Groq API returned HTTP error: 429"));
 
         AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
 
@@ -385,10 +436,121 @@ class AICarbonCoachServiceTest {
         assertThat(response.getSummary()).isEqualTo("Your total footprint is 45.00 kg CO₂e.");
     }
 
+    // ── Cache behaviour ───────────────────────────────────────────────────
+
+    @Test
+    void generateCoach_cacheHit_doesNotCallGroq() throws Exception {
+        CarbonInsightResponse insight = sampleInsight();
+        AICarbonCoachResponse cachedResponse = AICarbonCoachResponse.builder()
+                .summary("Cached AI summary")
+                .strengths(List.of("Cached strength"))
+                .concerns(List.of())
+                .recommendations(List.of())
+                .weeklyChallenge("Cached challenge")
+                .motivation("Cached motivation")
+                .aiGenerated(true)
+                .build();
+
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(insight));
+        when(coachCacheService.get(eq(USER_ID), any())).thenReturn(cachedResponse);
+
+        AICarbonCoachResponse response = service.generateCoach(USER_ID).orElseThrow();
+
+        assertThat(response.getSummary()).isEqualTo("Cached AI summary");
+        assertThat(response.isAiGenerated()).isTrue();
+        verify(groqClient, never()).generateContent(any(), any());
+        verify(coachCacheService, never()).put(any(), any(), any());
+    }
+
+    @Test
+    void generateCoach_cacheMiss_callsGroqAndStores() throws Exception {
+        CarbonInsightResponse insight = sampleInsight();
+        CarbonAnalyticsResponse analytics = insight.getAnalytics();
+
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(insight));
+        when(coachCacheService.get(eq(USER_ID), eq(analytics))).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
+        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn(validJson());
+
+        service.generateCoach(USER_ID);
+
+        verify(groqClient).generateContent(eq(COACH_MODEL), eq(SYSTEM_PROMPT), eq("prompt"));
+        verify(coachCacheService).put(eq(USER_ID), eq(analytics), any());
+    }
+
+    @Test
+    void generateCoach_aiFailure_doesNotCache() throws Exception {
+        CarbonInsightResponse insight = sampleInsight();
+        CarbonAnalyticsResponse analytics = insight.getAnalytics();
+
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(insight));
+        when(coachCacheService.get(eq(USER_ID), eq(analytics))).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
+        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
+        when(groqClient.generateContent(any(), any(), any()))
+                .thenThrow(new IngestionException("Groq API error"));
+
+        service.generateCoach(USER_ID);
+
+        verify(coachCacheService, never()).put(any(), any(), any());
+    }
+
+    @Test
+    void generateCoach_emptySummaryFromAi_doesNotCache() throws Exception {
+        CarbonInsightResponse insight = sampleInsight();
+        CarbonAnalyticsResponse analytics = insight.getAnalytics();
+
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(insight));
+        when(coachCacheService.get(eq(USER_ID), eq(analytics))).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
+        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("""
+                {
+                  "summary": "",
+                  "strengths": ["S1"],
+                  "concerns": [],
+                  "recommendations": [],
+                  "weeklyChallenge": "C",
+                  "motivation": "M"
+                }
+                """);
+
+        service.generateCoach(USER_ID);
+
+        verify(coachCacheService, never()).put(any(), any(), any());
+    }
+
+    @Test
+    void generateCoach_fallbackResponse_doesNotCache() throws Exception {
+        CarbonInsightResponse insight = sampleInsight();
+        CarbonAnalyticsResponse analytics = insight.getAnalytics();
+
+        when(carbonInsightUseCase.generateInsights(USER_ID))
+                .thenReturn(Optional.of(insight));
+        when(coachCacheService.get(eq(USER_ID), eq(analytics))).thenReturn(null);
+        when(carbonCoachPromptBuilder.getSystemPrompt()).thenReturn(SYSTEM_PROMPT);
+        when(carbonCoachPromptBuilder.build(any())).thenReturn("prompt");
+        when(groqClient.generateContent(any(), any(), any())).thenReturn("not valid json {{{");
+
+        service.generateCoach(USER_ID);
+
+        verify(coachCacheService, never()).put(any(), any(), any());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private CarbonInsightResponse sampleInsight() {
         return CarbonInsightResponse.builder()
+                .analytics(CarbonAnalyticsResponse.builder()
+                        .activityCount(5)
+                        .totalCarbonKg(new BigDecimal("45.0"))
+                        .averageDailyKg(new BigDecimal("6.4"))
+                        .build())
                 .summary("Your total footprint is 45.00 kg CO₂e.")
                 .achievements(List.of("Achievement 1", "Achievement 2"))
                 .warnings(List.of("Warning 1"))

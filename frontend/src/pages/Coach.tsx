@@ -61,10 +61,10 @@ export default function Coach() {
   const [question, setQuestion] = useState('')
   const [questionSent, setQuestionSent] = useState(false)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     try {
-      const coachRes = await getAICoach()
+      const coachRes = await getAICoach(undefined, signal)
       if (coachRes.success && coachRes.data) setCoach(coachRes.data)
     } catch {
       // silent
@@ -74,7 +74,9 @@ export default function Coach() {
   }, [])
 
   useEffect(() => {
-    fetchData()
+    const controller = new AbortController()
+    fetchData(controller.signal)
+    return () => controller.abort()
   }, [fetchData])
 
   const handleSendQuestion = () => {
@@ -169,6 +171,12 @@ export default function Coach() {
             {coach?.aiGenerated && (
               <span className="inline-flex items-center gap-1 ml-2 text-emerald-600 font-medium text-xs">
                 <Sparkles className="w-3 h-3" /> AI-powered
+              </span>
+            )}
+            {coach?.confidence !== undefined && coach.confidence > 0 && (
+              <span className="inline-flex items-center gap-1 ml-2 text-ink-muted text-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                {coach.confidence}% confidence
               </span>
             )}
           </p>

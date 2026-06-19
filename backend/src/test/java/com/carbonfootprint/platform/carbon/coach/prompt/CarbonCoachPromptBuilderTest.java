@@ -1,8 +1,12 @@
 package com.carbonfootprint.platform.carbon.coach.prompt;
 
+import com.carbonfootprint.platform.carbon.analytics.model.CarbonAnalyticsResponse;
 import com.carbonfootprint.platform.carbon.analytics.model.CarbonInsightResponse;
+import com.carbonfootprint.platform.carbon.analytics.model.CategoryEmissionSummary;
+import com.carbonfootprint.platform.carbon.analytics.model.TopEmissionActivity;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,7 +15,34 @@ class CarbonCoachPromptBuilderTest {
 
     private final CarbonCoachPromptBuilder builder = new CarbonCoachPromptBuilder();
 
-    // ── System prompt content ─────────────────────────────────────────────
+    // ── System prompt (separate from build) ───────────────────────────────
+
+    @Test
+    void getSystemPrompt_returnsNonNull() {
+        assertThat(builder.getSystemPrompt()).isNotNull();
+    }
+
+    @Test
+    void getSystemPrompt_containsCoachRole() {
+        assertThat(builder.getSystemPrompt()).contains("sustainability coach");
+    }
+
+    @Test
+    void getSystemPrompt_containsNeverInventRule() {
+        assertThat(builder.getSystemPrompt()).contains("Never invent numbers");
+    }
+
+    @Test
+    void getSystemPrompt_containsNeverModifyRule() {
+        assertThat(builder.getSystemPrompt()).contains("ONLY supplied data");
+    }
+
+    @Test
+    void getSystemPrompt_doesNotContainConfidenceInstruction() {
+        assertThat(builder.getSystemPrompt()).doesNotContain("confidence");
+    }
+
+    // ── build() returns user message only ─────────────────────────────────
 
     @Test
     void build_returnsNonNull() {
@@ -21,344 +52,193 @@ class CarbonCoachPromptBuilderTest {
     }
 
     @Test
-    void build_containsSustainabilityCoachRole() {
+    void build_doesNotContainSystemPrompt() {
         String result = builder.build(null);
 
-        assertThat(result).contains("experienced sustainability coach");
+        assertThat(result).doesNotContain("EcoBuddy");
     }
 
-    @Test
-    void build_containsNeverInventRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never invent numbers");
-    }
+    // ── Analytics section (compact key-value) ─────────────────────────────
 
     @Test
-    void build_containsNeverModifyRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never modify numbers");
-    }
-
-    @Test
-    void build_containsNeverCalculateRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never perform calculations");
-    }
-
-    @Test
-    void build_containsUseOnlySuppliedInfoRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Use only supplied information");
-    }
-
-    @Test
-    void build_containsBeEncouragingRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Be encouraging");
-    }
-
-    @Test
-    void build_containsMaxWordLimitRule() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Maximum 250 words");
-    }
-
-    // ── Summary section ───────────────────────────────────────────────────
-
-    @Test
-    void build_withValidSummary_appendsSummarySection() {
+    void build_withAnalytics_includesKeyValueFormat() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Your total footprint is 45.00 kg CO₂e across 5 activities.")
+                .analytics(CarbonAnalyticsResponse.builder()
+                        .activityCount(5)
+                        .totalCarbonKg(new BigDecimal("45.0"))
+                        .categoryTotals(List.of(
+                                CategoryEmissionSummary.builder()
+                                        .category("SHOPPING")
+                                        .carbonKg(new BigDecimal("27.0"))
+                                        .percentageOfTotal(new BigDecimal("60.0"))
+                                        .build()))
+                        .topActivities(List.of(
+                                TopEmissionActivity.builder()
+                                        .merchant("Ashoka")
+                                        .carbonKg(new BigDecimal("27.0"))
+                                        .build()))
+                        .build())
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).contains("Summary\n-------\nYour total footprint is 45.00 kg CO₂e across 5 activities.");
+        assertThat(result).contains("act:5");
+        assertThat(result).contains("kg:45.0");
+        assertThat(result).contains("cat:SHOPPING");
+        assertThat(result).contains("merchant:Ashoka");
     }
 
     @Test
-    void build_withNullSummary_doesNotAppendSummarySection() {
+    void build_withNullAnalytics_skipsAnalyticsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary(null)
+                .analytics(null)
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).doesNotContain("Summary\n-------");
-    }
-
-    @Test
-    void build_withBlankSummary_doesNotAppendSummarySection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("   ")
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).doesNotContain("Summary\n-------");
-    }
-
-    @Test
-    void build_withNullInsight_doesNotAppendSummarySection() {
-        String result = builder.build(null);
-
-        assertThat(result).doesNotContain("Summary\n-------");
+        assertThat(result).doesNotContain("#DATA");
     }
 
     // ── Achievements section ──────────────────────────────────────────────
 
     @Test
-    void build_withPopulatedAchievements_appendsAchievementsSection() {
+    void build_withPopulatedAchievements_includesAchievementsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .achievements(List.of("Below 100 kg threshold", "Low average per activity"))
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).contains("Achievements\n------------\n- Below 100 kg threshold\n- Low average per activity\n");
+        assertThat(result).contains("#ACHV");
+        assertThat(result).contains("Below 100 kg threshold");
+        assertThat(result).contains("Low average per activity");
     }
 
     @Test
-    void build_withEmptyAchievements_doesNotAppendAchievementsSection() {
+    void build_withEmptyAchievements_doesNotIncludeAchievementsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .achievements(List.of())
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).doesNotContain("Achievements\n------------");
+        assertThat(result).doesNotContain("#ACHV");
     }
 
     @Test
-    void build_withNullAchievements_doesNotAppendAchievementsSection() {
+    void build_withNullAchievements_doesNotIncludeAchievementsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .achievements(null)
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).doesNotContain("Achievements\n------------");
+        assertThat(result).doesNotContain("#ACHV");
     }
 
-    // ── Warnings section ─────────────────────────────────────────────────
+    // ── Warnings section (mapped to Concerns) ────────────────────────────
 
     @Test
-    void build_withPopulatedWarnings_appendsWarningsSection() {
+    void build_withPopulatedWarnings_includesConcernsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .warnings(List.of("FUEL is highest", "Above average emissions"))
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).contains("Warnings\n--------\n- FUEL is highest\n- Above average emissions\n");
+        assertThat(result).contains("#CONC");
+        assertThat(result).contains("FUEL is highest");
+        assertThat(result).contains("Above average emissions");
     }
 
     @Test
-    void build_withEmptyWarnings_doesNotAppendWarningsSection() {
+    void build_withEmptyWarnings_doesNotIncludeConcernsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .warnings(List.of())
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).doesNotContain("Warnings\n--------");
-    }
-
-    @Test
-    void build_withNullWarnings_doesNotAppendWarningsSection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
-                .warnings(null)
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).doesNotContain("Warnings\n--------");
+        assertThat(result).doesNotContain("#CONC");
     }
 
     // ── Recommendations section ───────────────────────────────────────────
 
     @Test
-    void build_withPopulatedRecommendations_appendsRecommendationsSection() {
+    void build_withPopulatedRecommendations_includesRecommendationsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .recommendations(List.of("Switch to electric vehicles", "Use public transport"))
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).contains("Recommendations\n---------------\n- Switch to electric vehicles\n- Use public transport\n");
+        assertThat(result).contains("#REC");
+        assertThat(result).contains("Switch to electric vehicles");
+        assertThat(result).contains("Use public transport");
     }
 
     @Test
-    void build_withEmptyRecommendations_doesNotAppendRecommendationsSection() {
+    void build_withEmptyRecommendations_doesNotIncludeRecommendationsSection() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
                 .recommendations(List.of())
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).doesNotContain("Recommendations\n---------------");
+        assertThat(result).doesNotContain("#REC");
     }
 
-    @Test
-    void build_withNullRecommendations_doesNotAppendRecommendationsSection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
-                .recommendations(null)
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).doesNotContain("Recommendations\n---------------");
-    }
-
-    // ── Insights section ──────────────────────────────────────────────────
-
-    @Test
-    void build_withPopulatedInsights_appendsInsightsSection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
-                .insights(List.of("Total emissions: 45.00 kg CO₂e", "Highest category: FUEL"))
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).contains("Insights\n--------\n- Total emissions: 45.00 kg CO₂e\n- Highest category: FUEL\n");
-    }
-
-    @Test
-    void build_withEmptyInsights_doesNotAppendInsightsSection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
-                .insights(List.of())
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).doesNotContain("Insights\n--------");
-    }
-
-    @Test
-    void build_withNullInsights_doesNotAppendInsightsSection() {
-        CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Summary")
-                .insights(null)
-                .build();
-
-        String result = builder.build(insight);
-
-        assertThat(result).doesNotContain("Insights\n--------");
-    }
-
-    // ── Final instruction ─────────────────────────────────────────────────
+    // ── Output schema ─────────────────────────────────────────────────────
 
     @Test
     void build_containsReturnOnlyJsonInstruction() {
         String result = builder.build(null);
 
-        assertThat(result).contains("Return ONLY valid JSON");
-    }
-
-    @Test
-    void build_containsNoMarkdownInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("No markdown");
-    }
-
-    @Test
-    void build_containsNoCodeFencesInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("No code fences");
-    }
-
-    @Test
-    void build_containsNoExplanationsInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("No explanations");
-    }
-
-    @Test
-    void build_containsNeverInventNumbersInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never invent numbers");
-    }
-
-    @Test
-    void build_containsNeverModifyNumbersInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never modify numerical values");
-    }
-
-    @Test
-    void build_containsNeverCalculateEmissionsInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Never calculate emissions");
-    }
-
-    @Test
-    void build_containsUseOnlySuppliedResponseInstruction() {
-        String result = builder.build(null);
-
-        assertThat(result).contains("Use only the supplied CarbonInsightResponse");
+        assertThat(result).contains("#OUT");
     }
 
     @Test
     void build_containsJsonSchema() {
         String result = builder.build(null);
 
-        assertThat(result).contains("\"summary\": \"string\"");
-        assertThat(result).contains("\"strengths\": [\"string\"]");
-        assertThat(result).contains("\"concerns\": [\"string\"]");
-        assertThat(result).contains("\"recommendations\": [\"string\"]");
-        assertThat(result).contains("\"weeklyChallenge\": \"string\"");
-        assertThat(result).contains("\"motivation\": \"string\"");
+        assertThat(result).contains("\"summary\":");
+        assertThat(result).contains("\"strengths\":");
+        assertThat(result).contains("\"concerns\":");
+        assertThat(result).contains("\"recommendations\":");
+        assertThat(result).contains("\"weeklyChallenge\":");
+        assertThat(result).contains("\"motivation\":");
+        assertThat(result).doesNotContain("\"confidence\":");
     }
 
-    // ── Ignores non-summary fields ────────────────────────────────────────
+    // ── Full prompt with all data ─────────────────────────────────────────
 
     @Test
-    void build_withPopulatedInsight_ignoresNonSummaryFields() {
+    void build_withPopulatedInsight_includesAllSections() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Your footprint is 45.00 kg CO₂e.")
+                .analytics(CarbonAnalyticsResponse.builder()
+                        .activityCount(5)
+                        .totalCarbonKg(new BigDecimal("45.0"))
+                        .build())
                 .achievements(List.of("Below 100 kg threshold"))
                 .warnings(List.of("FUEL is highest"))
                 .recommendations(List.of("Switch to EV"))
-                .insights(List.of("Total: 45.00 kg"))
                 .build();
 
         String result = builder.build(insight);
 
-        assertThat(result).contains("experienced sustainability coach");
-        assertThat(result).contains("Your footprint is 45.00 kg CO₂e.");
+        assertThat(result).contains("act:5");
         assertThat(result).contains("Below 100 kg threshold");
         assertThat(result).contains("FUEL is highest");
         assertThat(result).contains("Switch to EV");
-        assertThat(result).contains("Total: 45.00 kg");
     }
 
     @Test
     void build_alwaysReturnsSamePrompt() {
         CarbonInsightResponse insight = CarbonInsightResponse.builder()
-                .summary("Test summary")
+                .analytics(CarbonAnalyticsResponse.builder()
+                        .activityCount(3)
+                        .totalCarbonKg(new BigDecimal("10.0"))
+                        .build())
                 .build();
 
         String first = builder.build(insight);

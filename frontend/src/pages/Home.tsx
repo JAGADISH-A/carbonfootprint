@@ -56,13 +56,13 @@ export default function Home() {
   const [coach, setCoach] = useState<AICarbonCoachResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     try {
       const [aRes, iRes, cRes] = await Promise.all([
-        getCarbonAnalytics(),
-        getCarbonInsights(),
-        getAICoach(),
+        getCarbonAnalytics(undefined, signal),
+        getCarbonInsights(undefined, signal),
+        getAICoach(undefined, signal),
       ])
       if (aRes.success && aRes.data) setAnalytics(aRes.data)
       if (iRes.success && iRes.data) setInsights(iRes.data)
@@ -75,7 +75,9 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    fetchData()
+    const controller = new AbortController()
+    fetchData(controller.signal)
+    return () => controller.abort()
   }, [fetchData])
 
   const actions = useActionRecommendations(analytics, insights, coach)

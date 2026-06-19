@@ -82,6 +82,7 @@ public class CarbonInsightService implements CarbonInsightUseCase {
         List<String> insights = buildInsights(analytics);
 
         CarbonInsightResponse response = CarbonInsightResponse.builder()
+                .analytics(analytics)
                 .summary(summary)
                 .achievements(achievements)
                 .warnings(warnings)

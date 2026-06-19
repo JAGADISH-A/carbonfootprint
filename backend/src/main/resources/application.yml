@@ -38,6 +38,15 @@ spring:
         show-details: when-authorized
 
 # =============================================================================
+#  AI Provider Selection
+#  Controls which DocumentParser bean is loaded.
+#  Values: groq (default)
+#  Override via: AI_PROVIDER=groq  or  -Dai.provider=groq
+# =============================================================================
+ai:
+  provider: ${AI_PROVIDER:groq}
+
+# =============================================================================
 #  Carbon Platform — Custom Configuration Namespace
 # =============================================================================
 carbon:
@@ -53,14 +62,13 @@ carbon:
   upload:
     supported-mime-types: ${CARBON_SUPPORTED_MIME_TYPES:image/jpeg,image/png,image/webp,application/pdf}
 
-
-  # ── Google Gemini AI ─────────────────────────────────────────────────────────
-  gemini:
-    api-key: ${GEMINI_API_KEY}
-    model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
-    # Max tokens for extraction prompt response
-    max-output-tokens: ${GEMINI_MAX_TOKENS:4096}
-    temperature: ${GEMINI_TEMPERATURE:0.1}
+  # ── Groq AI ───────────────────────────────────────────────────────────
+  groq:
+    api-key: ${GROQ_API_KEY:}
+    receipt-model: ${GROQ_RECEIPT_MODEL:openai/gpt-oss-20b}
+    coach-model: ${GROQ_COACH_MODEL:llama-3.3-70b-versatile}
+    base-url: ${GROQ_BASE_URL:https://api.groq.com}
+    timeout-seconds: ${GROQ_TIMEOUT:60}
 
   # ── OCR Configuration ────────────────────────────────────────────────────────
   ocr:
@@ -69,6 +77,12 @@ carbon:
     paddle:
       base-url: ${PADDLE_OCR_URL:http://localhost:8001}
       timeout-seconds: ${PADDLE_OCR_TIMEOUT:30}
+
+  # ── AI Coach Cache ──────────────────────────────────────────────────────────
+  coach:
+    cache:
+      enabled: ${COACH_CACHE_ENABLED:true}
+      ttl-minutes: ${COACH_CACHE_TTL_MINUTES:60}
 
   # ── CORS ─────────────────────────────────────────────────────────────────────
   cors:

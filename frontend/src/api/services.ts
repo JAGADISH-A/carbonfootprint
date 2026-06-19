@@ -10,10 +10,10 @@ import type {
 export async function getCarbonAnalytics(params?: {
   from?: string
   to?: string
-}): Promise<ApiResponse<CarbonAnalyticsResponse>> {
+}, signal?: AbortSignal): Promise<ApiResponse<CarbonAnalyticsResponse>> {
   const response = await apiClient.get<ApiResponse<CarbonAnalyticsResponse>>(
     '/api/v1/carbon/analytics',
-    { params }
+    { params, signal }
   )
   return response.data
 }
@@ -21,21 +21,21 @@ export async function getCarbonAnalytics(params?: {
 export async function getCarbonInsights(params?: {
   from?: string
   to?: string
-}): Promise<ApiResponse<CarbonInsightResponse>> {
+}, signal?: AbortSignal): Promise<ApiResponse<CarbonInsightResponse>> {
   const response = await apiClient.get<ApiResponse<CarbonInsightResponse>>(
     '/api/v1/carbon/insights',
-    { params }
+    { params, signal }
   )
   return response.data
 }
 
-export async function getAICoach(params?: {
-  from?: string
-  to?: string
-}): Promise<ApiResponse<AICarbonCoachResponse>> {
+export async function getAICoach(
+  params?: { from?: string; to?: string },
+  signal?: AbortSignal
+): Promise<ApiResponse<AICarbonCoachResponse>> {
   const response = await apiClient.get<ApiResponse<AICarbonCoachResponse>>(
     '/api/v1/carbon/coach',
-    { params }
+    { params, signal }
   )
   return response.data
 }

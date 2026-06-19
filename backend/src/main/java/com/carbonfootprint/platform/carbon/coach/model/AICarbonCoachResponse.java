@@ -18,11 +18,14 @@ import java.util.List;
  *   <li><strong>recommendations</strong> — actionable, personalized suggestions to reduce emissions</li>
  *   <li><strong>weeklyChallenge</strong> — a concrete, achievable weekly goal for emission reduction</li>
  *   <li><strong>motivation</strong> — encouraging conclusion to sustain behavior change</li>
+ *   <li><strong>confidence</strong> — AI's confidence (0-100) based on available activity data volume</li>
  *   <li><strong>aiGenerated</strong> — whether Gemini enriched the content (false = deterministic fallback)</li>
  * </ul>
  *
  * <h3>Design</h3>
  * All lists are non-null. Empty list means no items of that type.
+ * The {@code confidence} field reflects data richness: high with many recent
+ * activities, low with sparse data.
  * The {@code aiGenerated} flag distinguishes AI-enriched responses from
  * deterministic fallbacks returned when Gemini is unavailable.
  */
@@ -43,6 +46,8 @@ public class AICarbonCoachResponse {
     private String weeklyChallenge;
 
     private String motivation;
+
+    private int confidence;
 
     private boolean aiGenerated;
 }
