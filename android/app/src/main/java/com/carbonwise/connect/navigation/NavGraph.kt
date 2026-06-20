@@ -43,11 +43,7 @@ fun NavGraph(
 
         composable(Screen.Permissions.route) {
             PermissionsScreen(
-                onComplete = {
-                    navController.navigate(Screen.CompanionStatus.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

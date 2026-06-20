@@ -1,11 +1,8 @@
 package com.carbonwise.connect.ui.permissions
 
-import android.app.NotificationManager
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.provider.Settings
-import androidx.compose.foundation.layout.Arrangement
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,217 +12,179 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsScreen(
-    onComplete: () -> Unit,
+    onNavigateBack: () -> Unit,
     viewModel: PermissionsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val permissionState by viewModel.permissionState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(uiState.allComplete) {
-        if (uiState.allComplete) {
-            delay(500)
-            onComplete()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Set Up Permissions",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+    val smsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {
+            viewModel.refreshPermissions()
+        }
+    )
 
-        Text(
-            text = "Step ${uiState.currentStep + 1} of ${uiState.steps.size}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        LinearProgressIndicator(
-            progress = { (uiState.currentStep + 1).toFloat() / uiState.steps.size },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-        )
-
-        if (uiState.currentStep < uiState.steps.size) {
-            val currentStep = uiState.steps[uiState.currentStep]
-            val icon = when (currentStep.id) {
-                "notification" -> Icons.Default.Notifications
-                "sms" -> Icons.Default.Message
-                "camera" -> Icons.Default.CameraAlt
-                else -> Icons.Default.CheckCircle
-            }
-
-            PermissionCard(
-                icon = icon,
-                title = currentStep.title,
-                description = currentStep.description,
-                isGranted = currentStep.isGranted,
-                isOptional = currentStep.isOptional,
-                onRequest = {
-                    when (currentStep.id) {
-                        "notification" -> viewModel.requestNotificationAccess()
-                        "sms" -> viewModel.requestSmsPermission()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Manage Permissions") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                },
-                onSkip = { viewModel.skipOptional() },
-                onContinue = { viewModel.nextStep() },
-                onRefresh = { viewModel.refreshPermissions() }
+                }
             )
         }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            PermissionItemCard(
+                title = "SMS Access",
+                description = "Required to detect purchase receipts.",
+                icon = Icons.Default.Message,
+                isGranted = permissionState.smsGranted,
+                actionLabel = "Grant Access",
+                onAction = {
+                    smsLauncher.launch(Manifest.permission.READ_SMS)
+                }
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Privacy first: All data stays on your device until you choose to sync.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+            PermissionItemCard(
+                title = "Notification Access",
+                description = "Required to read payment notifications.",
+                icon = Icons.Default.Notifications,
+                isGranted = permissionState.notificationGranted,
+                actionLabel = "Open Settings",
+                onAction = {
+                    viewModel.requestNotificationAccess()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PermissionItemCard(
+                title = "Battery Optimization",
+                description = "Required to ensure background sync runs reliably.",
+                icon = Icons.Default.BatteryAlert,
+                isGranted = permissionState.batteryOptimizationIgnored,
+                actionLabel = "Disable Optimization",
+                onAction = {
+                    viewModel.requestBatteryOptimization()
+                }
+            )
+        }
     }
 }
 
 @Composable
-private fun PermissionCard(
-    icon: ImageVector,
+private fun PermissionItemCard(
     title: String,
     description: String,
+    icon: ImageVector,
     isGranted: Boolean,
-    isOptional: Boolean,
-    onRequest: () -> Unit,
-    onSkip: () -> Unit,
-    onContinue: () -> Unit,
-    onRefresh: () -> Unit
+    actionLabel: String,
+    onAction: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isGranted)
                 MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surface
+            else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = if (isGranted)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (isGranted) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (isGranted) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Access Granted",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        contentDescription = "Granted",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = onContinue,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Continue")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
-                }
-            } else {
-                Button(
-                    onClick = onRequest,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Grant Access")
-                }
+            }
 
-                if (isOptional) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = onSkip,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Skip for now")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Default.SkipNext, contentDescription = null)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.fillMaxWidth()
+            if (!isGranted) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onAction,
+                    modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Check Again")
+                    Text(actionLabel)
                 }
             }
         }

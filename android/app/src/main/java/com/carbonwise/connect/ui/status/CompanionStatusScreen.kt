@@ -118,32 +118,94 @@ fun CompanionStatusScreen(
                     StatusRow(label = "Last Sync", value = uiState.lastSync)
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
                     StatusRow(label = "Pending Uploads", value = uiState.pendingUploads.toString())
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    StatusRow(label = "Failed Uploads", value = uiState.failedUploads.toString(), isCritical = uiState.failedUploads > 0)
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    StatusRow(label = "Sync Status", value = uiState.syncStatus)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "Permissions & Configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(text = "Companion Health", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(16.dp))
+
+            val healthState by viewModel.healthState.collectAsState()
+            
+            // Show overall health banner
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = when (healthState.overallHealth) {
+                        com.carbonwise.connect.data.model.HealthStatus.HEALTHY -> Color(0xFFE8F5E9)
+                        com.carbonwise.connect.data.model.HealthStatus.WARNING -> Color(0xFFFFF3E0)
+                        com.carbonwise.connect.data.model.HealthStatus.CRITICAL -> Color(0xFFFFEBEE)
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = when (healthState.overallHealth) {
+                            com.carbonwise.connect.data.model.HealthStatus.HEALTHY -> Icons.Default.Check
+                            else -> Icons.Default.Warning
+                        },
+                        contentDescription = null,
+                        tint = when (healthState.overallHealth) {
+                            com.carbonwise.connect.data.model.HealthStatus.HEALTHY -> Color(0xFF4CAF50)
+                            com.carbonwise.connect.data.model.HealthStatus.WARNING -> Color(0xFFFF9800)
+                            com.carbonwise.connect.data.model.HealthStatus.CRITICAL -> Color(0xFFF44336)
+                        },
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Status: ${healthState.overallHealth.name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    StatusRow(label = "SMS Access", value = if (uiState.smsPermission) "Granted" else "Not Granted", isWarning = !uiState.smsPermission)
-                    Divider(modifier = Modifier.padding(vertical = 12.dp))
-                    StatusRow(label = "Notification Access", value = if (uiState.notificationPermission) "Granted" else "Not Granted", isWarning = !uiState.notificationPermission)
-                    Divider(modifier = Modifier.padding(vertical = 12.dp))
-                    StatusRow(label = "Background Sync", value = if (uiState.backgroundSyncEnabled) "Running" else "Disabled", isWarning = !uiState.backgroundSyncEnabled)
+                    healthState.components.forEachIndexed { index, component ->
+                        StatusRow(
+                            label = component.title, 
+                            value = component.description, 
+                            isGood = component.status == com.carbonwise.connect.data.model.HealthStatus.HEALTHY,
+                            isWarning = component.status == com.carbonwise.connect.data.model.HealthStatus.WARNING,
+                            isCritical = component.status == com.carbonwise.connect.data.model.HealthStatus.CRITICAL
+                        )
+                        if (index < healthState.components.size - 1) {
+                            Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            LaunchedEffect(uiState.syncResult) {
+                uiState.syncResult?.let {
+                    snackbarHostState.showSnackbar(it)
+                    viewModel.clearSyncResult()
+                }
+            }
+
             Button(
-                onClick = { /* TODO Trigger Sync */ },
-                modifier = Modifier.fillMaxWidth().height(50.dp)
+                onClick = { viewModel.triggerLocalSync() },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                enabled = !uiState.isSyncing
             ) {
-                Text("Sync Now")
+                if (uiState.isSyncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Syncing...")
+                } else {
+                    Text("Sync Now")
+                }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -188,7 +250,7 @@ fun CompanionStatusScreen(
 }
 
 @Composable
-fun StatusRow(label: String, value: String, isGood: Boolean = false, isWarning: Boolean = false) {
+fun StatusRow(label: String, value: String, isGood: Boolean = false, isWarning: Boolean = false, isCritical: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -202,12 +264,15 @@ fun StatusRow(label: String, value: String, isGood: Boolean = false, isWarning: 
             } else if (isWarning) {
                 Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFF9800), modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
+            } else if (isCritical) {
+                Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF44336), modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
             }
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isGood) Color(0xFF4CAF50) else if (isWarning) Color(0xFFFF9800) else MaterialTheme.colorScheme.onSurface
+                color = if (isGood) Color(0xFF4CAF50) else if (isWarning) Color(0xFFFF9800) else if (isCritical) Color(0xFFF44336) else MaterialTheme.colorScheme.onSurface
             )
         }
     }

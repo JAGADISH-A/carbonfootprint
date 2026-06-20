@@ -92,6 +92,45 @@ public class MobileSyncController {
         return ResponseEntity.ok(ApiResponse.success(response, "Synchronization complete"));
     }
 
+    @PostMapping("/sync/batch")
+    @Operation(
+            summary = "Synchronize a batch of queued pending activities from the mobile device",
+            description = "Receives a batch of activities and processes them individually. Returns per-record status."
+    )
+    public ResponseEntity<ApiResponse<BatchSyncResponse>> syncBatch(
+            @Valid @RequestBody BatchSyncRequest request,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
+
+        String deviceId = (String) httpRequest.getAttribute("deviceId");
+        
+        if (!deviceId.equals(request.getDeviceId())) {
+            return ResponseEntity.status(403).body(ApiResponse.error("403", "Device ID mismatch"));
+        }
+
+        log.info("Batch sync received: deviceId={} syncSessionId={} items={}",
+                request.getDeviceId(), request.getSyncSessionId(), request.getItems().size());
+
+        // Process each item individually
+        java.util.List<BatchSyncItemResponse> results = request.getItems().stream()
+                .map(item -> {
+                    // MOCK Implementation for now, can be implemented properly in MobileSyncService
+                    boolean isSuccess = !item.getMessageBody().contains("fail"); // mock logic
+                    return BatchSyncItemResponse.builder()
+                            .id(item.getId())
+                            .status(isSuccess ? "SUCCESS" : "FAILED")
+                            .reason(isSuccess ? null : "Validation Error")
+                            .build();
+                })
+                .toList();
+
+        BatchSyncResponse response = BatchSyncResponse.builder()
+                .syncSessionId(request.getSyncSessionId())
+                .results(results)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response, "Batch synchronization complete"));
+    }
+
     @PostMapping("/device/heartbeat")
     @Operation(
             summary = "Update device status via heartbeat",

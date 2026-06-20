@@ -25,6 +25,12 @@ interface ApiService {
         @Body request: SyncRequest
     ): Response<SyncResponse>
 
+    @POST("api/v1/mobile/sync/batch")
+    suspend fun syncBatch(
+        @Header("Authorization") authHeader: String,
+        @Body request: com.carbonwise.connect.data.model.BatchSyncRequest
+    ): Response<com.carbonwise.connect.data.model.BatchSyncResponse>
+
     @POST("api/v1/device/disconnect")
     suspend fun disconnect(
         @Header("Authorization") authHeader: String,

@@ -116,3 +116,17 @@ frontend/pnpm-debug.log*
 
 # android/.gitignore
 .gradle/
+# Gradle
+.gradle/
+build/
+
+# Android Studio
+local.properties
+captures/
+.cxx/
+
+# IntelliJ
+.idea/
+
+# Generated
+*.iml

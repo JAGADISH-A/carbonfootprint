@@ -5,22 +5,26 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.hilt.work.HiltWorker
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.carbonwise.connect.data.repository.ConnectionRepository
 import com.carbonwise.connect.data.repository.ApiResult
+import com.carbonwise.connect.data.repository.UploadRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val repository: ConnectionRepository
+    private val uploadRepository: UploadRepository
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -29,9 +33,20 @@ class SyncWorker @AssistedInject constructor(
         private const val NOTIFICATION_ID = 1001
 
         fun schedule(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .build()
+
             val request = PeriodicWorkRequestBuilder<SyncWorker>(
                 15, TimeUnit.MINUTES
-            ).build()
+            )
+                .setConstraints(constraints)
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    15, TimeUnit.MINUTES // Retry 1 -> 15m, Retry 2 -> 30m, etc.
+                )
+                .build()
 
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
@@ -47,25 +62,18 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        val pendingCount = repository.getPendingCount()
-        if (pendingCount == 0) return Result.success()
+        val syncSessionId = UUID.randomUUID().toString()
+        val startTime = System.currentTimeMillis()
 
-        return when (val syncResult = repository.syncPendingData()) {
-            is ApiResult.Success -> Result.success()
-            is ApiResult.Error -> Result.retry()
+        return when (val syncResult = uploadRepository.syncBatch(syncSessionId)) {
+            is ApiResult.Success -> {
+                // Log success: syncSessionId, duration = System.currentTimeMillis() - startTime, uploaded count
+                Result.success()
+            }
+            is ApiResult.Error -> {
+                // Log failure
+                Result.retry()
+            }
         }
-    }
-
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Background Sync",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "CarbonWise background data synchronization"
-        }
-
-        val manager = applicationContext.getSystemService(NotificationManager::class.java)
-        manager?.createNotificationChannel(channel)
     }
 }
