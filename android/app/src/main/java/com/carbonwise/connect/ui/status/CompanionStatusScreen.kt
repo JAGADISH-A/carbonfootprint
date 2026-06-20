@@ -195,7 +195,10 @@ fun CompanionStatusScreen(
             }
 
             Button(
-                onClick = { viewModel.triggerLocalSync() },
+                onClick = { 
+                    android.util.Log.d("ManualSync", "SyncNow Button clicked")
+                    viewModel.triggerLocalSync() 
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = !uiState.isSyncing
             ) {

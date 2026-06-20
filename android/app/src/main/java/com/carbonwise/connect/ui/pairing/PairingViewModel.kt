@@ -55,7 +55,6 @@ class PairingViewModel @Inject constructor(
         viewModelScope.launch {
             val result = authRepository.pairDevice(
                 pairingCode = currentCode,
-                deviceId = java.util.UUID.randomUUID().toString(), // Should ideally be a persistent stable ID
                 deviceName = android.os.Build.MODEL ?: "Android Device",
                 manufacturer = android.os.Build.MANUFACTURER ?: "Unknown",
                 model = android.os.Build.MODEL ?: "Unknown",

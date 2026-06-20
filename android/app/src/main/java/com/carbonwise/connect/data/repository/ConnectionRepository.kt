@@ -19,6 +19,7 @@ import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.carbonwise.connect.data.auth.TokenManager
 
 sealed class ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>()
@@ -30,7 +31,8 @@ class ConnectionRepository @Inject constructor(
     private val apiClient: ApiClient,
     private val settingsStore: SettingsStore,
     private val pendingDataDao: PendingDataDao,
-    private val syncLogDao: SyncLogDao
+    private val syncLogDao: SyncLogDao,
+    private val tokenManager: TokenManager
 ) {
     suspend fun healthCheck(): ApiResult<HealthResponse> {
         return try {
@@ -47,8 +49,8 @@ class ConnectionRepository @Inject constructor(
 
     suspend fun connect(authToken: String): ApiResult<ConnectResponse> {
         return try {
-            val deviceId = settingsStore.deviceId.first().ifEmpty {
-                UUID.randomUUID().toString().also { settingsStore.setDeviceId(it) }
+            val deviceId = tokenManager.getDeviceId() ?: UUID.randomUUID().toString().also {
+                tokenManager.saveDeviceId(it)
             }
             val response = apiClient.apiService.connect(
                 ConnectRequest(deviceId = deviceId, authToken = authToken)
@@ -57,7 +59,6 @@ class ConnectionRepository @Inject constructor(
                 val body = response.body()!!
                 if (body.success && body.account != null) {
                     settingsStore.setConnected(true)
-                    settingsStore.setAuthToken(authToken)
                     settingsStore.setAccountInfo(
                         userId = body.account.userId,
                         email = body.account.email,
@@ -75,7 +76,7 @@ class ConnectionRepository @Inject constructor(
 
     suspend fun syncPendingData(): ApiResult<Int> {
         return try {
-            val authToken = settingsStore.authToken.first()
+            val authToken = tokenManager.getDeviceToken() ?: ""
             if (authToken.isEmpty()) return ApiResult.Error("Not authenticated")
 
             val pending = pendingDataDao.getPending()
@@ -104,7 +105,7 @@ class ConnectionRepository @Inject constructor(
                     )
                 }
 
-            val deviceId = settingsStore.deviceId.first()
+            val deviceId = tokenManager.getDeviceId() ?: ""
             val request = SyncRequest(
                 deviceId = deviceId,
                 notifications = notifications,
@@ -158,10 +159,10 @@ class ConnectionRepository @Inject constructor(
 
     suspend fun disconnect(): ApiResult<Boolean> {
         return try {
-            val authToken = settingsStore.authToken.first()
+            val authToken = tokenManager.getDeviceToken() ?: ""
             if (authToken.isEmpty()) return ApiResult.Error("Not authenticated")
 
-            val deviceId = settingsStore.deviceId.first()
+            val deviceId = tokenManager.getDeviceId() ?: ""
             apiClient.apiService.disconnect(
                 authHeader = "Bearer $authToken",
                 request = mapOf("device_id" to deviceId)

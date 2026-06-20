@@ -40,6 +40,12 @@ class TokenManager @Inject constructor(
 
     fun getDeviceId(): String? = sharedPreferences.getString("device_id", null)
 
+    fun saveDeviceId(deviceId: String) {
+        sharedPreferences.edit()
+            .putString("device_id", deviceId)
+            .apply()
+    }
+
     fun isPaired(): Boolean = sharedPreferences.getBoolean("is_paired", false)
 
     fun getTokenExpiry(): Long = sharedPreferences.getLong("token_expiry", 0)

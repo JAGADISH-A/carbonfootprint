@@ -17,7 +17,6 @@ class AuthenticationRepository @Inject constructor(
 
     suspend fun pairDevice(
         pairingCode: String,
-        deviceId: String,
         deviceName: String,
         manufacturer: String,
         model: String,
@@ -25,6 +24,11 @@ class AuthenticationRepository @Inject constructor(
         appVersion: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            val deviceId = tokenManager.getDeviceId() 
+                ?: java.util.UUID.randomUUID().toString().also {
+                    tokenManager.saveDeviceId(it)
+                }
+
             val request = DeviceRegistrationRequest(
                 pairingCode = pairingCode,
                 deviceId = deviceId,

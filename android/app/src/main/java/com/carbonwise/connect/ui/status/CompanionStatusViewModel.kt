@@ -58,6 +58,7 @@ class CompanionStatusViewModel @Inject constructor(
     init {
         loadStatus()
         observePendingCount()
+        observeLastSync()
     }
 
     private fun loadStatus() {
@@ -90,33 +91,58 @@ class CompanionStatusViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            WorkManager.getInstance(context)
-                .getWorkInfosForUniqueWorkFlow("carbonwise_periodic_sync")
-                .collect { workInfos ->
-                    val status = if (workInfos.isNotEmpty()) {
-                        val info = workInfos.first()
-                        when (info.state) {
-                            WorkInfo.State.ENQUEUED -> "Waiting for Network"
-                            WorkInfo.State.RUNNING -> {
-                                if (info.runAttemptCount > 0) "Retrying" else "Syncing"
-                            }
-                            WorkInfo.State.FAILED -> "Failed"
-                            else -> "Idle"
-                        }
-                    } else {
-                        "Idle"
-                    }
-                    _uiState.update { it.copy(syncStatus = status, isSyncing = status == "Syncing" || status == "Retrying") }
+            kotlinx.coroutines.flow.combine(
+                WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow("carbonwise_periodic_sync"),
+                WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow("carbonwise_manual_sync")
+            ) { periodicInfos, manualInfos ->
+                val isManualRunning = manualInfos.any { it.state == WorkInfo.State.RUNNING }
+                val isPeriodicRunning = periodicInfos.any { it.state == WorkInfo.State.RUNNING }
+                val isManualEnqueued = manualInfos.any { it.state == WorkInfo.State.ENQUEUED }
+
+                if (isManualRunning || isPeriodicRunning) {
+                    val info = manualInfos.firstOrNull { it.state == WorkInfo.State.RUNNING } 
+                        ?: periodicInfos.first { it.state == WorkInfo.State.RUNNING }
+                    if (info.runAttemptCount > 0) "Retrying" else "Syncing"
+                } else if (isManualEnqueued) {
+                    "Waiting for Network"
+                } else {
+                    "Connected"
                 }
+            }.collect { status ->
+                _uiState.update { it.copy(syncStatus = status, isSyncing = status == "Syncing" || status == "Retrying") }
+            }
+        }
+    }
+
+    private fun observeLastSync() {
+        viewModelScope.launch {
+            settingsStore.lastSyncTime.collect { time ->
+                if (time == 0L) {
+                    _uiState.update { it.copy(lastSync = "Never") }
+                } else {
+                    val displayTime = if (System.currentTimeMillis() - time < 60_000) {
+                        "Just now"
+                    } else {
+                        android.text.format.DateUtils.getRelativeTimeSpanString(
+                            time,
+                            System.currentTimeMillis(),
+                            android.text.format.DateUtils.MINUTE_IN_MILLIS
+                        ).toString()
+                    }
+                    _uiState.update { it.copy(lastSync = displayTime) }
+                }
+            }
         }
     }
 
     fun triggerLocalSync() {
+        android.util.Log.d("ManualSync", "ViewModel.triggerLocalSync() called")
         _uiState.update { it.copy(syncResult = null) }
         viewModelScope.launch {
             try {
                 // Enqueue WorkManager sync instead of local
-                com.carbonwise.connect.service.SyncWorker.schedule(context)
+                android.util.Log.d("ManualSync", "Enqueuing WorkManager request")
+                com.carbonwise.connect.service.SyncWorker.syncNow(context)
                 _uiState.update { 
                     it.copy(
                         syncResult = "Sync initiated."

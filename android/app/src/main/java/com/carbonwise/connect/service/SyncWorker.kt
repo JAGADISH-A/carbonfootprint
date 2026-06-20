@@ -10,6 +10,8 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.ExistingWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -60,17 +62,39 @@ class SyncWorker @AssistedInject constructor(
                 )
         }
 
+        fun syncNow(context: Context) {
+            android.util.Log.d("ManualSync", "SyncWorker.syncNow() called")
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val request = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            android.util.Log.d("ManualSync", "WorkRequest ID: ${request.id}")
+            
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(
+                    "carbonwise_manual_sync",
+                    ExistingWorkPolicy.REPLACE,
+                    request
+                )
+        }
+
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }
     }
 
     override suspend fun doWork(): Result {
+        android.util.Log.d("ManualSync", "doWork() called")
         android.util.Log.d("SyncWorker", "Starting sync")
         val syncSessionId = UUID.randomUUID().toString()
         val startTime = System.currentTimeMillis()
 
         return try {
+            android.util.Log.d("ManualSync", "UploadRepository.syncBatch()")
             when (val syncResult = uploadRepository.syncBatch(syncSessionId)) {
                 is ApiResult.Success -> {
                     // Log success: syncSessionId, duration = System.currentTimeMillis() - startTime, uploaded count
@@ -79,7 +103,7 @@ class SyncWorker @AssistedInject constructor(
                 }
                 is ApiResult.Error -> {
                     // Log failure
-                    android.util.Log.e("SyncWorker", "Sync failed: ${syncResult.exception?.message}")
+                    android.util.Log.e("SyncWorker", "Sync failed: ${syncResult.message}")
                     Result.retry()
                 }
             }

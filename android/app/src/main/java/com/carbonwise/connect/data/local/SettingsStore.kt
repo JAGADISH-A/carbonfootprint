@@ -21,8 +21,6 @@ class SettingsStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private object Keys {
-        val DEVICE_ID = stringPreferencesKey("device_id")
-        val AUTH_TOKEN = stringPreferencesKey("auth_token")
         val ACCOUNT_EMAIL = stringPreferencesKey("account_email")
         val ACCOUNT_NAME = stringPreferencesKey("account_name")
         val ACCOUNT_USER_ID = stringPreferencesKey("account_user_id")
@@ -33,8 +31,6 @@ class SettingsStore @Inject constructor(
         val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
     }
 
-    val deviceId: Flow<String> = context.dataStore.data.map { it[Keys.DEVICE_ID] ?: "" }
-    val authToken: Flow<String> = context.dataStore.data.map { it[Keys.AUTH_TOKEN] ?: "" }
     val accountEmail: Flow<String> = context.dataStore.data.map { it[Keys.ACCOUNT_EMAIL] ?: "" }
     val accountName: Flow<String> = context.dataStore.data.map { it[Keys.ACCOUNT_NAME] ?: "" }
     val accountUserId: Flow<String> = context.dataStore.data.map { it[Keys.ACCOUNT_USER_ID] ?: "" }
@@ -43,14 +39,6 @@ class SettingsStore @Inject constructor(
     val notificationSyncEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.NOTIFICATION_SYNC_ENABLED] ?: true }
     val smsSyncEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.SMS_SYNC_ENABLED] ?: false }
     val lastSyncTime: Flow<Long> = context.dataStore.data.map { it[Keys.LAST_SYNC_TIME] ?: 0L }
-
-    suspend fun setDeviceId(id: String) {
-        context.dataStore.edit { it[Keys.DEVICE_ID] = id }
-    }
-
-    suspend fun setAuthToken(token: String) {
-        context.dataStore.edit { it[Keys.AUTH_TOKEN] = token }
-    }
 
     suspend fun setConnected(connected: Boolean) {
         context.dataStore.edit { it[Keys.CONNECTED] = connected }

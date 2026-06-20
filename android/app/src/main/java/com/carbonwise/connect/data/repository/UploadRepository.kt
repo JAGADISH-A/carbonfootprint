@@ -9,20 +9,22 @@ import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.carbonwise.connect.data.auth.TokenManager
 
 @Singleton
 class UploadRepository @Inject constructor(
     private val apiClient: ApiClient,
     private val settingsStore: SettingsStore,
-    private val pendingActivityRepository: PendingActivityRepository
+    private val pendingActivityRepository: PendingActivityRepository,
+    private val tokenManager: TokenManager
 ) {
     suspend fun syncBatch(syncSessionId: String): ApiResult<Int> {
         var processingIds = emptyList<String>()
         return try {
-            val authToken = settingsStore.authToken.first()
+            val authToken = tokenManager.getDeviceToken() ?: ""
             if (authToken.isEmpty()) return ApiResult.Error("Not authenticated")
 
-            val deviceId = settingsStore.deviceId.first()
+            val deviceId = tokenManager.getDeviceId() ?: ""
             if (deviceId.isEmpty()) return ApiResult.Error("Device ID not found")
 
             // 1. Fetch eligible items from PendingActivityRepository
@@ -30,7 +32,12 @@ class UploadRepository @Inject constructor(
             
             android.util.Log.d("SyncWorker", "Collected ${pendingActivities.size} activities")
             
-            if (pendingActivities.isEmpty()) return ApiResult.Success(0)
+            if (pendingActivities.isEmpty()) {
+                android.util.Log.d("ManualSync", "No activities to sync. Setting last sync time.")
+                settingsStore.setLastSyncTime(System.currentTimeMillis())
+                android.util.Log.d("ManualSync", "Last sync time set.")
+                return ApiResult.Success(0)
+            }
 
             // 2. Mark them as SYNCING
             processingIds = pendingActivities.map { it.id }

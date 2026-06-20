@@ -10,6 +10,7 @@ import com.carbonwise.connect.ingestion.pipeline.UploadManager
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.carbonwise.connect.data.auth.TokenManager
 
 /**
  * Handles upload of classified notification events to the backend.
@@ -18,19 +19,19 @@ import javax.inject.Singleton
 @Singleton
 class NotificationUploadManager @Inject constructor(
     private val apiClient: ApiClient,
-    private val settingsStore: SettingsStore
+    private val tokenManager: TokenManager
 ) : UploadManager {
 
     override suspend fun upload(events: List<QueuedEvent>): UploadResult {
         if (events.isEmpty()) return UploadResult.Success(0)
 
         return try {
-            val authToken = settingsStore.authToken.first()
+            val authToken = tokenManager.getDeviceToken() ?: ""
             if (authToken.isEmpty()) {
                 return UploadResult.Failure("Not authenticated", retryable = false)
             }
 
-            val deviceId = settingsStore.deviceId.first()
+            val deviceId = tokenManager.getDeviceId() ?: ""
             val notifications = events.map { event ->
                 PendingNotification(
                     id = event.id.hashCode().toLong(),
