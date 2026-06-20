@@ -20,10 +20,12 @@ class PermissionsViewModel @Inject constructor(
     val permissionState: StateFlow<PermissionState> = permissionManager.permissionState
 
     fun refreshPermissions() {
+        android.util.Log.d("PermissionDebug", "PermissionsViewModel refreshPermissions() called")
         permissionManager.refresh()
     }
 
     fun requestNotificationAccess() {
+        android.util.Log.d("PermissionDebug", "requestNotificationAccess: Opening Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
         val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)

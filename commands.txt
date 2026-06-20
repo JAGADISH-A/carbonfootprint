@@ -1,0 +1,1 @@
+& "C:\Users\jagan\AppData\Local\Android\Sdk\platform-tools\adb.exe" shell cmd notification allow_listener com.carbonwise.connect/com.carbonwise.connect.notification.NotificationCollector

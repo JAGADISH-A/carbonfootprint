@@ -59,6 +59,17 @@ class CompanionStatusViewModel @Inject constructor(
         loadStatus()
         observePendingCount()
         observeLastSync()
+
+        viewModelScope.launch {
+            healthState.collect {
+                android.util.Log.d("PermissionCheck", "ViewModel healthState collected: $it")
+            }
+        }
+    }
+
+    fun refreshPermissions() {
+        android.util.Log.d("PermissionCheck", "Refresh started in ViewModel")
+        companionHealthManager.refresh()
     }
 
     private fun loadStatus() {

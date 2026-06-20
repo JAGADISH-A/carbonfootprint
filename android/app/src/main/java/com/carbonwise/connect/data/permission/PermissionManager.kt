@@ -32,27 +32,74 @@ class PermissionManager @Inject constructor(
         val batteryIgnored = checkBatteryOptimization()
         val syncReady = checkBackgroundSync()
 
+        android.util.Log.d("PermissionCheck", "PermissionManager state before update: ${_permissionState.value}")
+
         _permissionState.update {
-            it.copy(
+            val newState = it.copy(
                 smsGranted = smsGranted,
                 notificationGranted = notificationGranted,
                 batteryOptimizationIgnored = batteryIgnored,
                 backgroundSyncReady = syncReady
             )
+            android.util.Log.d("PermissionCheck", "PermissionManager state updated: $newState")
+            newState
         }
     }
 
     private fun checkSmsPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_SMS
-        ) == PackageManager.PERMISSION_GRANTED
+        // Step 1 - Package info
+        android.util.Log.d("PermissionDebug", "context.packageName: ${context.packageName}")
+        android.util.Log.d("PermissionDebug", "BuildConfig.APPLICATION_ID: ${com.carbonwise.connect.BuildConfig.APPLICATION_ID}")
+        android.util.Log.d("PermissionDebug", "Process.myUid(): ${android.os.Process.myUid()}")
+        android.util.Log.d("PermissionDebug", "UserHandle.myUserId(): ${android.os.Process.myUserHandle().hashCode()}") // fallback for myUserId if api is restricted
+        android.util.Log.d("PermissionDebug", "Context hashCode: ${context.hashCode()}")
+
+        // Step 5 - SMS Permission & Manifest check
+        val readSms = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        val receiveSms = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        val postNotif = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        
+        android.util.Log.d("PermissionDebug", "READ_SMS = $readSms")
+        android.util.Log.d("PermissionDebug", "RECEIVE_SMS = $receiveSms")
+        android.util.Log.d("PermissionDebug", "POST_NOTIFICATIONS = $postNotif")
+
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+            val requestedPermissions = packageInfo.requestedPermissions?.joinToString() ?: "None"
+            android.util.Log.d("PermissionDebug", "Manifest permissions installed: $requestedPermissions")
+        } catch (e: Exception) {
+            android.util.Log.d("PermissionDebug", "Failed to get package info: ${e.message}")
+        }
+
+        return receiveSms // Currently using receiveSms based on previous fix
     }
 
     private fun checkNotificationListener(): Boolean {
         val packageName = context.packageName
-        val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
-        return enabledListeners.contains(packageName)
+        val component = android.content.ComponentName(context, com.carbonwise.connect.notification.NotificationCollector::class.java)
+        
+        // Step 2 - Verify Component
+        android.util.Log.d("PermissionDebug", "flattenToString: ${component.flattenToString()}")
+        android.util.Log.d("PermissionDebug", "className: ${component.className}")
+        android.util.Log.d("PermissionDebug", "packageName: ${component.packageName}")
+
+        // Step 4 - Compare Android APIs
+        // API A
+        val apiA = android.provider.Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+        // API B
+        val apiB = NotificationManagerCompat.getEnabledListenerPackages(context)
+        // API C
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val apiC = nm.isNotificationListenerAccessGranted(component)
+
+        android.util.Log.d("PermissionDebug", "API A (Settings.Secure): $apiA")
+        android.util.Log.d("PermissionDebug", "API B (NotificationManagerCompat): $apiB")
+        android.util.Log.d("PermissionDebug", "API C (isNotificationListenerAccessGranted): $apiC")
+
+        val result = apiB.contains(packageName)
+        android.util.Log.d("PermissionDebug", "Current calculated result (API B contains package): $result")
+
+        return result
     }
 
     private fun checkBatteryOptimization(): Boolean {

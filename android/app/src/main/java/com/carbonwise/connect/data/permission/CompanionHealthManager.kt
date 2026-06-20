@@ -21,6 +21,10 @@ class CompanionHealthManager @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
 
+    fun refresh() {
+        permissionManager.refresh()
+    }
+
     // Aggregate health information from all managers
     // Future expansion: use combine(permissionState, authState, syncState) { perm, auth, sync -> ... }
     val healthState: StateFlow<CompanionHealthState> = permissionManager.permissionState.map { permState ->

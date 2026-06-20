@@ -35,22 +35,44 @@ class NotificationFilter @Inject constructor() {
     )
 
     fun isUseful(notification: RawNotification): Boolean {
+        val logPrefix = "Package: ${notification.packageName}\n" +
+            "AppName: ${notification.appName}\n" +
+            "Title: ${notification.title}\n" +
+            "Text: ${notification.text}\n" +
+            "Reason: "
+
         // Stage 1: Package-based matching
-        if (notification.packageName in ignoredPackages) return false
+        if (notification.packageName in ignoredPackages) {
+            android.util.Log.d("NotificationPipeline", logPrefix + "package explicitly ignored in ignoredPackages whitelist")
+            return false
+        }
         
         // Let's use substring matching for allowed packages to be robust against package name variations
         val isAllowedPackage = allowedPackages.any { notification.packageName.contains(it, ignoreCase = true) }
         
-        if (!isAllowedPackage) return false
+        if (!isAllowedPackage) {
+            android.util.Log.d("NotificationPipeline", logPrefix + "package not in allowed packages whitelist")
+            return false
+        }
         
         // Stage 2: Content-based keyword matching
         val content = "${notification.title.orEmpty()} ${notification.text.orEmpty()} ${notification.subText.orEmpty()}".lowercase()
         
         // Ignore specific patterns (e.g., OTP)
-        if (ignoredKeywords.any { content.contains(it) }) return false
+        if (ignoredKeywords.any { content.contains(it) }) {
+            android.util.Log.d("NotificationPipeline", logPrefix + "content contains ignored OTP/system keywords")
+            return false
+        }
         
         // Accept if it contains transactional keywords
-        return transactionKeywords.any { content.contains(it) }
+        val hasTransactionKeyword = transactionKeywords.any { content.contains(it) }
+        if (hasTransactionKeyword) {
+            android.util.Log.d("NotificationPipeline", logPrefix + "accepted")
+            return true
+        } else {
+            android.util.Log.d("NotificationPipeline", logPrefix + "content missing required transaction keywords")
+            return false
+        }
     }
     
     fun getMerchant(notification: RawNotification): String {

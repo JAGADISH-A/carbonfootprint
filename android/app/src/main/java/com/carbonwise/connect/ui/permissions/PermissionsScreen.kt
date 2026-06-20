@@ -56,6 +56,7 @@ fun PermissionsScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                android.util.Log.d("PermissionDebug", "PermissionsScreen ON_RESUME, calling refreshPermissions()")
                 viewModel.refreshPermissions()
             }
         }
@@ -67,7 +68,8 @@ fun PermissionsScreen(
 
     val smsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = {
+        onResult = { isGranted ->
+            android.util.Log.d("PermissionDebug", "smsLauncher onResult: isGranted=$isGranted")
             viewModel.refreshPermissions()
         }
     )
@@ -98,7 +100,8 @@ fun PermissionsScreen(
                 isGranted = permissionState.smsGranted,
                 actionLabel = "Grant Access",
                 onAction = {
-                    smsLauncher.launch(Manifest.permission.READ_SMS)
+                    android.util.Log.d("PermissionDebug", "smsLauncher.launch(Manifest.permission.RECEIVE_SMS) called")
+                    smsLauncher.launch(Manifest.permission.RECEIVE_SMS)
                 }
             )
 

@@ -11,6 +11,7 @@ class SmsNormalizer @Inject constructor(
 ) {
     fun normalize(sms: RawSms): PendingActivity {
         val merchant = filter.getMerchant(sms)
+        android.util.Log.d("SMSPipeline", "Stage 5: Merchant/category extraction. merchant=$merchant")
         
         // Deterministic hash: sender + message body + timestamp
         val rawInput = "${sms.sender}|${sms.body}|${sms.receivedTimestamp}"
