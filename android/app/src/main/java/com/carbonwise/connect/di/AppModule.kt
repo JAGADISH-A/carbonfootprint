@@ -38,9 +38,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideApiClient(): ApiClient = ApiClient()
+    fun provideApiClient(authInterceptor: com.carbonwise.connect.data.network.AuthInterceptor): ApiClient = ApiClient(authInterceptor)
 
     @Provides
     @Named("base_url")
-    fun provideBaseUrl(): String = "https://api.carbonwise.app/"
+    fun provideBaseUrl(): String = "http://10.0.2.2:8080/" // Note: use localhost emulator alias for now
+
+    @Provides
+    @Singleton
+    fun provideMobileApiService(apiClient: ApiClient): com.carbonwise.connect.data.network.MobileApiService = apiClient.mobileApiService
 }

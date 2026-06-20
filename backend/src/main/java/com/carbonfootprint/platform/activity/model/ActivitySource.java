@@ -18,6 +18,9 @@ public enum ActivitySource {
     /** Parsed from an SMS message via Android Companion App (Future). */
     SMS,
 
+    /** Pre-enriched transaction submitted directly from the Android Companion App (Phase 4). */
+    MOBILE,
+
     /** Parsed from a bank or credit card statement (Future). */
     BANK_STATEMENT,
 

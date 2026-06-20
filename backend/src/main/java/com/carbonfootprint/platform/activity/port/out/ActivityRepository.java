@@ -63,6 +63,20 @@ public interface ActivityRepository {
     boolean existsByUserIdAndRawDocumentId(String userId, String rawDocumentId);
 
     /**
+     * Checks whether a mobile transaction has already been ingested.
+     *
+     * <p>Deduplication uses the combination of userId, deviceId, and transactionId
+     * stored in the activity metadata. This is sufficient because the Android app
+     * generates stable transaction IDs per event.
+     *
+     * @param userId        the authenticated user identifier
+     * @param deviceId      the originating device identifier
+     * @param transactionId the stable transaction ID assigned by the Android app
+     * @return {@code true} if a matching activity already exists
+     */
+    boolean existsByMobileTransaction(String userId, String deviceId, String transactionId);
+
+    /**
      * Deletes an activity by its ID.
      *
      * @param id the activity ID

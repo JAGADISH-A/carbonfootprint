@@ -41,18 +41,18 @@ class MainActivity : ComponentActivity() {
                     val isConnected by settingsStore.isConnected.collectAsState(initial = false)
 
                     val startDestination = when {
-                        isConnected -> Screen.Status.route
-                        onboardingComplete -> Screen.Status.route
-                        else -> Screen.Welcome.route
+                        isConnected -> Screen.CompanionStatus.route
+                        onboardingComplete -> Screen.CompanionStatus.route
+                        else -> Screen.Pairing.route
                     }
 
                     LaunchedEffect(Unit) {
                         val complete = settingsStore.onboardingComplete.first()
                         val connected = settingsStore.isConnected.first()
                         val target = when {
-                            connected -> Screen.Status.route
-                            complete -> Screen.Status.route
-                            else -> Screen.Welcome.route
+                            connected -> Screen.CompanionStatus.route
+                            complete -> Screen.CompanionStatus.route
+                            else -> Screen.Pairing.route
                         }
                         if (navController.currentDestination?.route != target) {
                             navController.navigate(target) {

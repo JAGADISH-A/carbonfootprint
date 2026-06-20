@@ -92,4 +92,7 @@ dependencies {
 
     // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
+
+    // Security Crypto
+    implementation("androidx.security:security-crypto-ktx:1.1.0-alpha06")
 }

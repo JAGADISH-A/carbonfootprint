@@ -6,6 +6,8 @@ import Coach from '@/pages/Coach'
 import Analytics from '@/pages/Analytics'
 import Activities from '@/pages/Activities'
 
+import Settings from '@/pages/Settings'
+
 function App() {
   return (
     <Routes>
@@ -15,7 +17,7 @@ function App() {
         <Route path="/coach" element={<Coach />} />
         <Route path="/insights" element={<Analytics />} />
         <Route path="/history" element={<Activities />} />
-        <Route path="/settings" element={<><h1 className="text-2xl font-bold text-ink">Settings</h1><p className="text-ink-muted mt-2">Coming soon.</p></>} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )

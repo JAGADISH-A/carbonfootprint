@@ -73,3 +73,33 @@ export async function sendChatMessage(
   )
   return response.data
 }
+
+export async function getConnectedDevices(
+  signal?: AbortSignal
+): Promise<ApiResponse<import('@/types/device').Device[]>> {
+  const response = await apiClient.get<ApiResponse<import('@/types/device').Device[]>>(
+    '/api/v1/mobile/devices',
+    { signal }
+  )
+  return response.data
+}
+
+export async function generatePairingCode(
+  signal?: AbortSignal
+): Promise<ApiResponse<import('@/types/device').PairingCodeResponse>> {
+  const response = await apiClient.post<ApiResponse<import('@/types/device').PairingCodeResponse>>(
+    '/api/v1/mobile/pairing/generate',
+    {},
+    { signal }
+  )
+  return response.data
+}
+
+export async function removeDevice(
+  deviceId: string
+): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(
+    `/api/v1/mobile/devices/${deviceId}`
+  )
+  return response.data
+}

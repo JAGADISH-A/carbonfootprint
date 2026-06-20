@@ -99,7 +99,6 @@ class ConnectionRepository @Inject constructor(
                     PendingSms(
                         id = it.id,
                         address = it.sourcePackage,
-                        title = it.title,
                         body = it.body,
                         timestamp = it.timestamp
                     )

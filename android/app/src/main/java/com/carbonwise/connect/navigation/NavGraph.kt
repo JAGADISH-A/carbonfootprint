@@ -10,14 +10,13 @@ import androidx.navigation.compose.composable
 import com.carbonwise.connect.data.local.SettingsStore
 import com.carbonwise.connect.ui.permissions.PermissionsScreen
 import com.carbonwise.connect.ui.settings.SettingsScreen
-import com.carbonwise.connect.ui.status.StatusScreen
-import com.carbonwise.connect.ui.welcome.WelcomeScreen
+import com.carbonwise.connect.ui.status.CompanionStatusScreen
 import kotlinx.coroutines.flow.first
 
 sealed class Screen(val route: String) {
-    data object Welcome : Screen("welcome")
+    data object Pairing : Screen("pairing")
     data object Permissions : Screen("permissions")
-    data object Status : Screen("status")
+    data object CompanionStatus : Screen("companion_status")
     data object Settings : Screen("settings")
 }
 
@@ -25,17 +24,18 @@ sealed class Screen(val route: String) {
 fun NavGraph(
     navController: NavHostController,
     settingsStore: SettingsStore,
-    startDestination: String = Screen.Welcome.route
+    startDestination: String = Screen.Pairing.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable(Screen.Welcome.route) {
-            WelcomeScreen(
-                onNavigateToPermissions = {
-                    navController.navigate(Screen.Permissions.route) {
-                        popUpTo(Screen.Welcome.route) { inclusive = true }
+
+        composable(Screen.Pairing.route) {
+            com.carbonwise.connect.ui.pairing.PairDeviceScreen(
+                onPairedSuccessfully = {
+                    navController.navigate(Screen.CompanionStatus.route) {
+                        popUpTo(Screen.Pairing.route) { inclusive = true }
                     }
                 }
             )
@@ -44,17 +44,22 @@ fun NavGraph(
         composable(Screen.Permissions.route) {
             PermissionsScreen(
                 onComplete = {
-                    navController.navigate(Screen.Status.route) {
+                    navController.navigate(Screen.CompanionStatus.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.Status.route) {
-            StatusScreen(
+        composable(Screen.CompanionStatus.route) {
+            CompanionStatusScreen(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onUnpaired = {
+                    navController.navigate(Screen.Pairing.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -62,7 +67,7 @@ fun NavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onSignOut = {
-                    navController.navigate(Screen.Welcome.route) {
+                    navController.navigate(Screen.Pairing.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }

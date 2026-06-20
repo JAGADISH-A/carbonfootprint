@@ -41,6 +41,12 @@ public class SecurityConfig {
             "/actuator/health"
     };
 
+    private final com.carbonfootprint.platform.mobile.security.DeviceTokenFilter deviceTokenFilter;
+
+    public SecurityConfig(com.carbonfootprint.platform.mobile.security.DeviceTokenFilter deviceTokenFilter) {
+        this.deviceTokenFilter = deviceTokenFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -54,10 +60,15 @@ public class SecurityConfig {
                 // Authorization rules
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        // Phase 4.4 specific: Mobile pairing endpoints are public
+                        .requestMatchers("/api/v1/mobile/pair", "/api/v1/mobile/token/refresh", "/api/v1/mobile/pairing/generate").permitAll()
                         // TODO (Phase 2): Uncomment when OAuth2 Resource Server is configured
                         // .anyRequest().authenticated()
                         .anyRequest().permitAll() // Temporarily open — remove in Phase 2
-                );
+                )
+                
+                // Add DeviceTokenFilter before UsernamePasswordAuthenticationFilter
+                .addFilterBefore(deviceTokenFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         // TODO (Phase 2): Enable JWT validation
         // .oauth2ResourceServer(oauth2 -> oauth2

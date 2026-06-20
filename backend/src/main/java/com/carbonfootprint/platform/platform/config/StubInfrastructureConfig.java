@@ -14,6 +14,13 @@ import com.carbonfootprint.platform.ingestion.port.out.DocumentParser;
 import com.carbonfootprint.platform.integration.ocr.OcrProvider;
 import com.carbonfootprint.platform.integration.ocr.StubOcrProvider;
 import com.carbonfootprint.platform.integration.ocr.model.OcrResult;
+import com.carbonfootprint.platform.mobile.model.Device;
+import com.carbonfootprint.platform.mobile.model.PairingCode;
+import com.carbonfootprint.platform.mobile.repository.DeviceRepository;
+import com.carbonfootprint.platform.mobile.repository.PairingCodeRepository;
+import com.carbonfootprint.platform.platform.exception.IngestionException;
+import com.carbonfootprint.platform.integration.ocr.StubOcrProvider;
+import com.carbonfootprint.platform.integration.ocr.model.OcrResult;
 import com.carbonfootprint.platform.platform.exception.IngestionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -118,8 +125,89 @@ public class StubInfrastructureConfig {
             }
 
             @Override
+            public boolean existsByMobileTransaction(String userId, String deviceId, String transactionId) {
+                return store.values().stream()
+                        .filter(a -> userId.equals(a.getUserId()))
+                        .anyMatch(a -> {
+                            Object meta = a.getMetadata();
+                            if (meta instanceof Map<?, ?> m) {
+                                return transactionId.equals(m.get("transactionId"))
+                                        && deviceId.equals(m.get("deviceId"));
+                            }
+                            return false;
+                        });
+            }
+
+            @Override
             public void deleteById(String id) {
                 store.remove(id);
+            }
+        };
+    }
+
+    @Bean
+    public DeviceRepository stubDeviceRepository() {
+        return new DeviceRepository() {
+            private final Map<String, Device> store = new ConcurrentHashMap<>();
+
+            @Override
+            public Device save(Device device) {
+                store.put(device.getId(), device);
+                return device;
+            }
+
+            @Override
+            public Optional<Device> findById(String id) {
+                return Optional.ofNullable(store.get(id));
+            }
+
+            @Override
+            public Optional<Device> findByDeviceId(String deviceId) {
+                return store.values().stream()
+                        .filter(d -> deviceId.equals(d.getDeviceId()))
+                        .findFirst();
+            }
+
+            @Override
+            public Optional<Device> findByRefreshTokenHash(String refreshTokenHash) {
+                return store.values().stream()
+                        .filter(d -> refreshTokenHash.equals(d.getRefreshTokenHash()))
+                        .findFirst();
+            }
+
+            @Override
+            public List<Device> findByUserId(String userId) {
+                return store.values().stream()
+                        .filter(d -> userId.equals(d.getUserId()))
+                        .toList();
+            }
+
+            @Override
+            public void deleteById(String id) {
+                store.remove(id);
+            }
+        };
+    }
+
+    @Bean
+    public PairingCodeRepository stubPairingCodeRepository() {
+        return new PairingCodeRepository() {
+            private final Map<String, PairingCode> store = new ConcurrentHashMap<>();
+
+            @Override
+            public PairingCode save(PairingCode pairingCode) {
+                store.put(pairingCode.getCode(), pairingCode);
+                return pairingCode;
+            }
+
+            @Override
+            public Optional<PairingCode> findByCode(String code) {
+                return Optional.ofNullable(store.get(code));
+            }
+
+            @Override
+            public void deleteByCode(String code) {
+                store.remove(code);
             }
         };
     }

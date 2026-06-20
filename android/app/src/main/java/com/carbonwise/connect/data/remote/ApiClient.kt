@@ -10,7 +10,9 @@ import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
-class ApiClient @Inject constructor() {
+class ApiClient @Inject constructor(
+    private val authInterceptor: com.carbonwise.connect.data.network.AuthInterceptor
+) {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -21,6 +23,7 @@ class ApiClient @Inject constructor() {
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .addInterceptor(loggingInterceptor)
+        .addInterceptor(authInterceptor)
         .build()
 
     @Inject
@@ -34,5 +37,14 @@ class ApiClient @Inject constructor() {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)
+    }
+
+    val mobileApiService: com.carbonwise.connect.data.network.MobileApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(if (::baseUrl.isInitialized && baseUrl.isNotEmpty()) baseUrl else "https://api.carbonwise.app/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(com.carbonwise.connect.data.network.MobileApiService::class.java)
     }
 }

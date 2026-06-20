@@ -150,6 +150,39 @@ public class FirestoreActivityRepository implements ActivityRepository {
     }
 
     @Override
+    public boolean existsByMobileTransaction(String userId, String deviceId, String transactionId) {
+        log.debug("FirestoreActivityRepository.existsByMobileTransaction() — deviceId={} transactionId={}", deviceId, transactionId);
+        try {
+            // Query by userId + source=MOBILE + mobileTransactionId (stored in metadata)
+            // Firestore cannot filter on nested map fields without composite indexes,
+            // so we filter by userId + source, then check deviceId+transactionId in memory.
+            List<com.google.cloud.firestore.QueryDocumentSnapshot> docs =
+                    firestore.collection(collectionName)
+                             .whereEqualTo("userId", userId)
+                             .whereEqualTo("source", "MOBILE")
+                             .get().get()
+                             .getDocuments();
+
+            for (com.google.cloud.firestore.QueryDocumentSnapshot doc : docs) {
+                Object meta = doc.get("metadata");
+                if (meta instanceof Map<?, ?> metaMap) {
+                    Object storedTxId = metaMap.get("transactionId");
+                    Object storedDevId = metaMap.get("deviceId");
+                    if (transactionId.equals(storedTxId) && deviceId.equals(storedDevId)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Firestore mobile dedup check interrupted", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Firestore mobile dedup check failed", e.getCause());
+        }
+    }
+
+    @Override
     public void deleteById(String id) {
         log.debug("FirestoreActivityRepository.deleteById() — id={}", id);
         try {
