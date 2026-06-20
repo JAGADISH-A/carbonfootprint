@@ -17,11 +17,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.work.WorkManager
+import androidx.work.WorkInfo
+
 data class CompanionUiState(
     val connectionStatus: String = "Connected",
     val pairedAccount: String = "Loading...",
     val lastSync: String = "Never",
-    val pendingUploads: Int = 0,
+    val pendingUploads: Int = 0, // Total pending
+    val smsQueueCount: Int = 0,
+    val notificationQueueCount: Int = 0,
     val failedUploads: Int = 0,
     val syncStatus: String = "Idle",
     val isUnpairing: Boolean = false,
@@ -31,10 +38,7 @@ data class CompanionUiState(
     val syncResult: String? = null
 )
 
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import androidx.work.WorkManager
-import androidx.work.WorkInfo
+
 
 @HiltViewModel
 class CompanionStatusViewModel @Inject constructor(
@@ -68,6 +72,16 @@ class CompanionStatusViewModel @Inject constructor(
         viewModelScope.launch {
             pendingActivityRepository.getPendingCount().collect { count ->
                 _uiState.update { it.copy(pendingUploads = count) }
+            }
+        }
+        viewModelScope.launch {
+            pendingActivityRepository.getPendingCountBySource(com.carbonwise.connect.data.model.ActivitySource.SMS.name).collect { count ->
+                _uiState.update { it.copy(smsQueueCount = count) }
+            }
+        }
+        viewModelScope.launch {
+            pendingActivityRepository.getPendingCountBySource(com.carbonwise.connect.data.model.ActivitySource.NOTIFICATION.name).collect { count ->
+                _uiState.update { it.copy(notificationQueueCount = count) }
             }
         }
         viewModelScope.launch {

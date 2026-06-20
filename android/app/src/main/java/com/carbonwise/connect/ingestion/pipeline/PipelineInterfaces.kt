@@ -1,5 +1,9 @@
 package com.carbonwise.connect.ingestion.pipeline
 
+import com.carbonwise.connect.ingestion.model.ClassificationResult
+import com.carbonwise.connect.ingestion.model.QueuedEvent
+import com.carbonwise.connect.ingestion.model.UploadResult
+
 /**
  * Stage 1: Converts raw platform data into a clean, typed model.
  * SMS parser converts SmsMessage, Email parser converts MimeMessage, etc.

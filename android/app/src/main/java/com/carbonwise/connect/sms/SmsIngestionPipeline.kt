@@ -1,6 +1,5 @@
 package com.carbonwise.connect.sms
 
-import com.carbonwise.connect.data.model.toEntity
 import com.carbonwise.connect.data.queue.PendingActivityRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,7 +26,7 @@ class SmsIngestionPipeline @Inject constructor(
                 val pendingActivity = normalizer.normalize(rawSms)
                 
                 // 4. Store in Room (IGNORE duplicate strategy handles existing)
-                val wasInserted = repository.insertActivity(pendingActivity.toEntity())
+                val wasInserted = repository.insertActivity(pendingActivity)
                 if (wasInserted) {
                     newActivitiesSaved++
                 }

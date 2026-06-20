@@ -2,9 +2,9 @@ package com.carbonwise.connect.ingestion.notification
 
 import android.service.notification.StatusBarNotification
 import com.carbonwise.connect.ingestion.model.NotificationEvent
+import com.carbonwise.connect.ingestion.model.QueuedEvent
 import com.carbonwise.connect.ingestion.model.UploadResult
 import com.carbonwise.connect.ingestion.queue.NotificationQueueRepository
-import com.carbonwise.connect.ingestion.queue.QueuedEvent
 import javax.inject.Inject
 import javax.inject.Singleton
 

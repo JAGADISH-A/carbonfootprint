@@ -27,6 +27,9 @@ class UploadRepository @Inject constructor(
 
             // 1. Fetch eligible items from PendingActivityRepository
             val pendingActivities = pendingActivityRepository.getEligibleForSync(maxRetries = 5)
+            
+            android.util.Log.d("SyncWorker", "Collected ${pendingActivities.size} activities")
+            
             if (pendingActivities.isEmpty()) return ApiResult.Success(0)
 
             // 2. Mark them as SYNCING
@@ -42,7 +45,7 @@ class UploadRepository @Inject constructor(
                     receivedTimestamp = activity.receivedTimestamp,
                     normalizedMerchant = activity.normalizedMerchant,
                     category = activity.category,
-                    source = activity.source,
+                    source = activity.source.name,
                     rawHash = activity.rawHash,
                     ingestionVersion = activity.ingestionVersion
                 )
@@ -53,6 +56,8 @@ class UploadRepository @Inject constructor(
                 syncSessionId = syncSessionId,
                 items = itemRequests
             )
+
+            android.util.Log.d("SyncWorker", "Uploading activities...")
 
             // 4. Send request to Backend API
             val response = apiClient.apiService.syncBatch(

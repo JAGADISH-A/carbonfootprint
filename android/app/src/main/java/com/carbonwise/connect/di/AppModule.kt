@@ -2,6 +2,7 @@ package com.carbonwise.connect.di
 
 import android.content.Context
 import androidx.room.Room
+import com.carbonwise.connect.BuildConfig
 import com.carbonwise.connect.data.local.AppDatabase
 import com.carbonwise.connect.data.local.PendingDataDao
 import com.carbonwise.connect.data.local.SyncLogDao
@@ -36,13 +37,15 @@ object AppModule {
     @Provides
     fun provideSyncLogDao(db: AppDatabase): SyncLogDao = db.syncLogDao()
 
-    @Provides
-    @Singleton
-    fun provideApiClient(authInterceptor: com.carbonwise.connect.data.network.AuthInterceptor): ApiClient = ApiClient(authInterceptor)
-
+    /**
+     * Provides the Retrofit base URL from the variant-specific BuildConfig field.
+     *
+     * Debug   → http://127.0.0.1:8080/   (requires: adb reverse tcp:8080 tcp:8080)
+     * Release → https://api.carbonwise.app/
+     */
     @Provides
     @Named("base_url")
-    fun provideBaseUrl(): String = "http://10.0.2.2:8080/" // Note: use localhost emulator alias for now
+    fun provideBaseUrl(): String = BuildConfig.BASE_URL
 
     @Provides
     @Singleton

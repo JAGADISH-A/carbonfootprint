@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    RELEASE / DEFAULT network security config.
+
+    Enforces HTTPS-only for all traffic.
+    Cleartext HTTP is explicitly forbidden.
+    Only system certificate authorities are trusted
+    (no user-installed CAs, no custom anchors).
+
+    For the debug override that allows cleartext to localhost,
+    see src/debug/res/xml/network_security_config.xml.
+-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+</network-security-config>

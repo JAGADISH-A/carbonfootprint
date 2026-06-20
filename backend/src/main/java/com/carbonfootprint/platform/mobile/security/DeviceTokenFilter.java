@@ -28,12 +28,16 @@ public class DeviceTokenFilter extends OncePerRequestFilter {
             
         String path = request.getRequestURI();
         
-        // Only protect mobile specific authenticated endpoints
-        if (!path.startsWith("/api/v1/mobile/") ||
-            path.equals("/api/v1/mobile/pair") ||
-            path.equals("/api/v1/mobile/token/refresh") ||
-            path.equals("/api/v1/mobile/pairing/generate")) {
-            
+        // Only protect device-authenticated endpoints.
+        // Web dashboard endpoints (e.g., /devices, /pairing/generate) will bypass this filter.
+        boolean isDeviceEndpoint = path.startsWith("/api/v1/mobile/transactions") ||
+                                   path.startsWith("/api/v1/mobile/sync") ||
+                                   path.startsWith("/api/v1/mobile/device/heartbeat") ||
+                                   path.startsWith("/api/v1/mobile/config") ||
+                                   path.startsWith("/api/v1/mobile/status") ||
+                                   path.startsWith("/api/v1/mobile/logout");
+
+        if (!isDeviceEndpoint) {
             filterChain.doFilter(request, response);
             return;
         }

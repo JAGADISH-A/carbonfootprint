@@ -32,9 +32,15 @@ public class MobileIngestionController {
     @PostMapping
     @Operation(summary = "Submit a pre-enriched transaction from the mobile app")
     public ResponseEntity<ApiResponse<Activity>> submitTransaction(
-            @RequestBody EnrichedTransaction transaction) {
+            @RequestBody EnrichedTransaction transaction,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         
-        String userId = getCurrentUserId();
+        // Extract userId from request attribute populated by DeviceTokenFilter
+        String userId = (String) httpRequest.getAttribute("userId");
+        if (userId == null) {
+            userId = "anonymous"; // Fallback if filter didn't run
+        }
+        
         log.info("Received mobile transaction ingestion request for userId={}", userId);
 
         Activity savedActivity = mobileIngestionService.processTransaction(transaction, userId);

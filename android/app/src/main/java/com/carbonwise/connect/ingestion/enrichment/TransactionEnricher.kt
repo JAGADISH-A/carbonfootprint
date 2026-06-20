@@ -67,7 +67,7 @@ class CategoryEnricher(
             sourceApp = transaction.sourceApp,
             timestamp = transaction.timestamp,
             rawNotification = transaction.rawNotification,
-            confidence = transaction.confidence
+            confidence = transaction.overallConfidence
         )
         
         val mtResult = MerchantTypeResult(
@@ -115,7 +115,7 @@ class CarbonHintEnricher(
             sourceApp = transaction.sourceApp,
             timestamp = transaction.timestamp,
             rawNotification = transaction.rawNotification,
-            confidence = transaction.confidence
+            confidence = transaction.overallConfidence
         )
         
         val mtResult = MerchantTypeResult(
@@ -165,7 +165,7 @@ class ConfidenceCalculator(
             sourceApp = transaction.sourceApp,
             timestamp = transaction.timestamp,
             rawNotification = transaction.rawNotification,
-            confidence = transaction.confidence
+            confidence = transaction.overallConfidence
         )
         
         val mtResult = MerchantTypeResult(
@@ -196,7 +196,7 @@ class ConfidenceCalculator(
         val result = enrich(candidate, mtResult, catResult, hintResult)
         
         return transaction.copy(
-            confidence = result.overallConfidence
+            overallConfidence = result.overallConfidence
         )
     }
 }

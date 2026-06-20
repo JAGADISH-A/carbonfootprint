@@ -134,6 +134,7 @@ public class GroqClient {
         }
 
         log.debug("GroqClient.generateContent() — model={} promptLength={}", model, userPrompt.length());
+        log.debug("GroqClient.generateContent() — final prompt:\n{}", userPrompt);
 
         List<GroqMessage> messages = List.of(
                 GroqMessage.system(systemMessage),

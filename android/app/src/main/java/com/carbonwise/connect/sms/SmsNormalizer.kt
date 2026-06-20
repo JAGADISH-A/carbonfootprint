@@ -23,7 +23,7 @@ class SmsNormalizer @Inject constructor(
             receivedTimestamp = sms.receivedTimestamp,
             normalizedMerchant = merchant,
             category = null, // Store as null per requirements
-            source = "SMS",
+            source = com.carbonwise.connect.data.model.ActivitySource.SMS,
             syncStatus = "PENDING",
             rawHash = rawHash,
             ingestionVersion = 1

@@ -2,6 +2,7 @@ package com.carbonwise.connect.data.queue
 
 import com.carbonwise.connect.data.model.PendingActivity
 import com.carbonwise.connect.data.model.toDomain
+import com.carbonwise.connect.data.model.toEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +18,10 @@ class PendingActivityRepository @Inject constructor(
 
     fun getPendingCount(): Flow<Int> {
         return dao.getPendingCount()
+    }
+
+    fun getPendingCountBySource(source: String): Flow<Int> {
+        return dao.getPendingCountBySource(source)
     }
 
     fun getFailedCount(): Flow<Int> {

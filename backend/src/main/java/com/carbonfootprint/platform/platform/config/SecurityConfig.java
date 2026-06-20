@@ -61,7 +61,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         // Phase 4.4 specific: Mobile pairing endpoints are public
-                        .requestMatchers("/api/v1/mobile/pair", "/api/v1/mobile/token/refresh", "/api/v1/mobile/pairing/generate").permitAll()
+                        .requestMatchers("/api/v1/mobile/pair", "/api/v1/mobile/token/refresh").permitAll()
                         // TODO (Phase 2): Uncomment when OAuth2 Resource Server is configured
                         // .anyRequest().authenticated()
                         .anyRequest().permitAll() // Temporarily open — remove in Phase 2

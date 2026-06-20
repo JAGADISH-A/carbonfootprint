@@ -14,6 +14,9 @@ interface PendingActivityDao {
     @Query("SELECT COUNT(*) FROM pending_activities WHERE syncStatus = 'PENDING'")
     fun getPendingCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM pending_activities WHERE syncStatus = 'PENDING' AND source = :source")
+    fun getPendingCountBySource(source: String): Flow<Int>
+
     @Query("SELECT * FROM pending_activities WHERE syncStatus = 'PENDING' OR (syncStatus = 'FAILED' AND retryCount < :maxRetries)")
     suspend fun getEligibleForSync(maxRetries: Int = 5): List<PendingActivityEntity>
 

@@ -1,6 +1,7 @@
 package com.carbonwise.connect.ingestion.queue
 
 import com.carbonwise.connect.ingestion.model.ClassificationResult
+import com.carbonwise.connect.ingestion.model.DataSource
 import com.carbonwise.connect.ingestion.model.EventCategory
 import com.carbonwise.connect.ingestion.model.QueuedEvent
 import com.carbonwise.connect.ingestion.pipeline.QueueRepository
@@ -72,7 +73,7 @@ class NotificationQueueRepository @Inject constructor(
     private fun QueuedEvent.toEntity(): QueuedEventEntity {
         return QueuedEventEntity(
             id = id,
-            source = source.name,
+            source = DataSource.NOTIFICATION.name,
             category = classification.category.name,
             confidence = classification.confidence,
             packageName = packageName,

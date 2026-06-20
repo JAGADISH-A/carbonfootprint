@@ -1,5 +1,7 @@
 package com.carbonwise.connect.ingestion.model
 
+import java.util.UUID
+
 /**
  * Notification-specific event produced by NotificationParser.
  */

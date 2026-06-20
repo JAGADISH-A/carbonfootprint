@@ -27,6 +27,10 @@ class SyncWorker @AssistedInject constructor(
     private val uploadRepository: UploadRepository
 ) : CoroutineWorker(context, params) {
 
+    init {
+        android.util.Log.d("SyncWorker", "Worker instantiated")
+    }
+
     companion object {
         private const val CHANNEL_ID = "carbonwise_sync"
         private const val WORK_NAME = "carbonwise_periodic_sync"
@@ -62,18 +66,26 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        android.util.Log.d("SyncWorker", "Starting sync")
         val syncSessionId = UUID.randomUUID().toString()
         val startTime = System.currentTimeMillis()
 
-        return when (val syncResult = uploadRepository.syncBatch(syncSessionId)) {
-            is ApiResult.Success -> {
-                // Log success: syncSessionId, duration = System.currentTimeMillis() - startTime, uploaded count
-                Result.success()
+        return try {
+            when (val syncResult = uploadRepository.syncBatch(syncSessionId)) {
+                is ApiResult.Success -> {
+                    // Log success: syncSessionId, duration = System.currentTimeMillis() - startTime, uploaded count
+                    android.util.Log.d("SyncWorker", "Upload success")
+                    Result.success()
+                }
+                is ApiResult.Error -> {
+                    // Log failure
+                    android.util.Log.e("SyncWorker", "Sync failed: ${syncResult.exception?.message}")
+                    Result.retry()
+                }
             }
-            is ApiResult.Error -> {
-                // Log failure
-                Result.retry()
-            }
+        } catch (exception: Exception) {
+            android.util.Log.e("SyncWorker", "Sync failed", exception)
+            Result.retry()
         }
     }
 }

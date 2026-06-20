@@ -38,7 +38,7 @@ class AmountDetector {
         val results = mutableListOf<DetectedAmount>()
 
         for (pattern in patterns) {
-            val matcher = pattern.regex.toRegex().findAll(text)
+            val matcher = pattern.regex.findAll(text)
             for (match in matcher) {
                 val amount = parseAmount(match.value, pattern.currency)
                 if (amount != null) {

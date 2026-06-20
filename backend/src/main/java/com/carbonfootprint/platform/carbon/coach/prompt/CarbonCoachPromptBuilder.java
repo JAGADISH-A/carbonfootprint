@@ -53,7 +53,7 @@ public class CarbonCoachPromptBuilder {
      * Final instruction appended after all data sections.
      * Defines the exact JSON output schema that matches {@code AiResponseParser}.
      */
-    static final String OUTPUT_SCHEMA = "#OUT\n{\"summary\":\"\",\"strengths\":[],\"concerns\":[],\"recommendations\":[],\"weeklyChallenge\":\"\",\"motivation\":\"\"}";
+    static final String OUTPUT_SCHEMA = "Return ONLY valid JSON. Do not include markdown. Do not wrap in ```.\n#OUT\n{\"summary\":\"\",\"strengths\":[],\"concerns\":[],\"recommendations\":[],\"weeklyChallenge\":\"\",\"motivation\":\"\"}";
 
     /**
      * Builds the user message portion of the coaching prompt.
