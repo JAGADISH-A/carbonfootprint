@@ -40,8 +40,9 @@ object AppModule {
     /**
      * Provides the Retrofit base URL from the variant-specific BuildConfig field.
      *
-     * Debug   → http://127.0.0.1:8080/   (requires: adb reverse tcp:8080 tcp:8080)
-     * Release → https://api.carbonwise.app/
+     * Debug   → http://10.0.2.2:8080/   (requires: adb reverse tcp:8080 tcp:8080)
+     * Release → https://carbon-backend-890856260681.us-central1.run.app/
+     *           (override via CARBON_API_RELEASE_URL env var)
      */
     @Provides
     @Named("base_url")

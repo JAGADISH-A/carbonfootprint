@@ -14,23 +14,25 @@ services:
     networks:
       - carbon-network
 
-  # ── Backend Placeholder (Future Dockerization) ─────────────────────────────
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: carbon-backend
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - PADDLE_OCR_URL=http://ocr-sidecar:8001
-  #     - OCR_PROVIDER=paddle
-  #     # - FIRESTORE_EMULATOR_HOST=firestore-emulator:8089
-  #   depends_on:
-  #     ocr-sidecar:
-  #       condition: service_healthy
-  #   networks:
-  #     - carbon-network
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: carbon-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - SPRING_PROFILES_ACTIVE=local
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PADDLE_OCR_URL=http://ocr-sidecar:8001
+      - OCR_PROVIDER=paddle
+    depends_on:
+      ocr-sidecar:
+        condition: service_healthy
+    networks:
+      - carbon-network
 
   # ── Firestore Emulator Placeholder (Future Dockerization) ──────────────────
   # firestore-emulator:

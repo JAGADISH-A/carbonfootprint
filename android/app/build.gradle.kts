@@ -1,9 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+}
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
 android {
@@ -18,13 +26,23 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "release-key.jks"))
+            storePassword = keystoreProperties.getProperty("storePassword", "")
+            keyAlias = keystoreProperties.getProperty("keyAlias", "")
+            keyPassword = keystoreProperties.getProperty("keyPassword", "")
+        }
+    }
+
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://127.0.0.1:8080/\"")
+            val debugUrl = System.getenv("CARBON_API_DEBUG_URL") ?: "http://10.0.2.2:8080/"
+            buildConfigField("String", "BASE_URL", "\"$debugUrl\"")
         }
         release {
             isMinifyEnabled = true
@@ -33,7 +51,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://api.carbonwise.app/\"")
+            val releaseUrl = System.getenv("CARBON_API_RELEASE_URL") ?: "https://carbon-backend-890856260681.us-central1.run.app/"
+            buildConfigField("String", "BASE_URL", "\"$releaseUrl\"")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

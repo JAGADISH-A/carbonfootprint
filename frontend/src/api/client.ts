@@ -4,13 +4,13 @@ import type { ApiResponse } from '@/types/activity'
 /**
  * Pre-configured Axios instance for all backend API calls.
  *
- * Base URL is read from VITE_API_BASE_URL environment variable.
+ * Base URL is read from VITE_API_URL environment variable.
  * Falls back to relative path '/' to use the Vite dev server proxy.
  *
  * Auth: Bearer token is injected via request interceptor.
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '',
   headers: {
     'Content-Type': 'application/json',
   },

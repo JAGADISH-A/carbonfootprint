@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       // Proxy API calls to Spring Boot backend during development
       '/api': {
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
+        target: process.env.VITE_API_URL || process.env.VITE_API_BASE_URL || 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
       },

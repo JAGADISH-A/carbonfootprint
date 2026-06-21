@@ -42,14 +42,20 @@ public class SecurityConfig {
     };
 
     private final com.carbonfootprint.platform.mobile.security.DeviceTokenFilter deviceTokenFilter;
+    private final org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource;
 
-    public SecurityConfig(com.carbonfootprint.platform.mobile.security.DeviceTokenFilter deviceTokenFilter) {
+    public SecurityConfig(com.carbonfootprint.platform.mobile.security.DeviceTokenFilter deviceTokenFilter,
+                          org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource) {
         this.deviceTokenFilter = deviceTokenFilter;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // Enable CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
                 // Disable CSRF — REST API with JWT tokens; CSRF not needed
                 .csrf(csrf -> csrf.disable())
 

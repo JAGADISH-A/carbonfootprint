@@ -4,6 +4,14 @@
 #  No secrets are hardcoded.
 # =============================================================================
 
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 2048
+
 spring:
   application:
     name: carbon-intelligence-platform
@@ -23,8 +31,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-
-
   # ── Actuator ─────────────────────────────────────────────────────────────────
   # Note: Custom health endpoint is at /api/v1/health
   # Spring Actuator health is at /actuator/health
@@ -36,6 +42,8 @@ spring:
     endpoint:
       health:
         show-details: when-authorized
+        probes:
+          enabled: true
 
 # =============================================================================
 #  AI Provider Selection
