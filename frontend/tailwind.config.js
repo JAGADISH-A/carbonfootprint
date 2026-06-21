@@ -56,6 +56,15 @@ export default {
           faint:   '#94A396',
           ghost:   '#B8C4B9',
         },
+
+        cream: {
+          50:  '#FEFDF8',
+          100: '#FDF9ED',
+          200: '#FAF2D6',
+          300: '#F5E8B5',
+          400: '#EDDA8A',
+          500: '#E5CC60',
+        },
       },
 
       fontFamily: {
@@ -110,5 +119,7 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

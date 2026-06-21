@@ -72,72 +72,32 @@ export default function UploadPage() {
     })
 
     try {
-      // Stage 1: Upload
-      const uploadPromise = uploadReceipt(file)
+      // Show initial store hint from filename while uploading
+      setPreviewData((prev) => ({
+        ...prev,
+        store: file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
+      }))
 
-      // Simulate OCR reading with staged progress
-      setTimeout(() => {
-        advanceStage('reading')
-        // Simulate detected store after reading
-        setTimeout(() => {
-          setPreviewData((prev) => ({
-            ...prev,
-            store: file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
-          }))
-        }, 800)
-      }, 1000)
-
-      // Stage 3: Understanding
-      setTimeout(() => {
-        advanceStage('understanding')
-        // Simulate detected category
-        setTimeout(() => {
-          setPreviewData((prev) => ({
-            ...prev,
-            category: 'OTHER',
-            items: ['Purchase'],
-          }))
-        }, 600)
-      }, 2500)
-
-      // Stage 4: Extracting
-      setTimeout(() => {
-        advanceStage('extracting')
-        // Simulate detected date and amount
-        setTimeout(() => {
-          setPreviewData((prev) => ({
-            ...prev,
-            date: new Date().toISOString(),
-            amount: 0,
-          }))
-        }, 500)
-      }, 4000)
-
-      // Stage 5: Calculating
-      setTimeout(() => {
-        advanceStage('calculating')
-      }, 5500)
-
-      // Stage 6: Confidence check
-      setTimeout(() => {
-        advanceStage('confidence')
-      }, 7000)
-
-      // Stage 7: Saving
-      setTimeout(() => {
-        advanceStage('saving')
-      }, 8500)
-
-      const uploadResult = await uploadPromise
+      // Stage 1: Actual upload in progress
+      const uploadResult = await uploadReceipt(file)
 
       if (!uploadResult.success) {
         throw new Error(uploadResult.message || 'Upload failed')
       }
 
-      // Fetch analytics to get the latest activity
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Upload accepted — server is now processing
+      advanceStage('reading')
+      advanceStage('understanding')
+
+      // Server-side ingestion is complete, now fetch results
+      advanceStage('extracting')
+
+      // Fetch analytics to get the latest activity with full data
       const analytics = await getCarbonAnalytics()
+      advanceStage('calculating')
+
       const activities = analytics.data?.topActivities ?? []
+      advanceStage('confidence')
 
       if (activities.length > 0) {
         const latestActivity = activities[0]
@@ -147,6 +107,7 @@ export default function UploadPage() {
           store: latestActivity.merchant || prev.store,
           category: latestActivity.category,
           carbon: Number(latestActivity.carbonKg ?? 0),
+          date: latestActivity.occurredAt || prev.date,
         }))
       } else {
         setResult({
@@ -159,6 +120,7 @@ export default function UploadPage() {
         })
       }
 
+      advanceStage('saving')
       setPhase('success')
       setCurrentStage('success')
       // Refresh all dashboard data so other pages reflect the new activity

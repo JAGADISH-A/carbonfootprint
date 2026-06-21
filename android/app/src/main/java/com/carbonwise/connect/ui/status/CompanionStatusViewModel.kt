@@ -75,10 +75,11 @@ class CompanionStatusViewModel @Inject constructor(
     }
 
     private fun loadStatus() {
-        _uiState.update { 
-            it.copy(
-                pairedAccount = "Carbon User" // Placeholder until fetched from backend
-            ) 
+        viewModelScope.launch {
+            settingsStore.accountName.collect { name ->
+                val displayName = name.ifBlank { "Carbon User" }
+                _uiState.update { it.copy(pairedAccount = displayName) }
+            }
         }
     }
 

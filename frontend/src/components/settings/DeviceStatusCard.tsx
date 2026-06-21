@@ -28,22 +28,19 @@ export default function DeviceStatusCard({ device, onRemove, isRemoving, onPair 
     : 'Never'
 
   const handleSync = async () => {
-    setSyncState('requested')
-    setTimeout(async () => {
-      setSyncState('syncing')
-      try {
-        const response = await syncDevice(device.deviceId)
-        if (response.success) {
-          setSyncState('completed')
-          await refreshAll()
-          setTimeout(() => setSyncState('idle'), 1500)
-        } else {
-          setSyncState('failed')
-        }
-      } catch {
+    setSyncState('syncing')
+    try {
+      const response = await syncDevice(device.deviceId)
+      if (response.success) {
+        setSyncState('completed')
+        await refreshAll()
+        setTimeout(() => setSyncState('idle'), 1500)
+      } else {
         setSyncState('failed')
       }
-    }, 800)
+    } catch {
+      setSyncState('failed')
+    }
   }
 
   return (

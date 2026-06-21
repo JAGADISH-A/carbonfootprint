@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Minus, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import type { TopEmissionActivity } from '@/types/activity'
+import type { TopEmissionActivity, CarbonInsightResponse } from '@/types/activity'
 import { categoryConfig } from '@/pages/insights/constants'
 import ActivityCard from './ActivityCard'
 
@@ -18,9 +18,10 @@ interface DateGroupProps {
   group: DateGroupData
   index: number
   defaultExpanded?: boolean
+  insights?: CarbonInsightResponse | null
 }
 
-export default function DateGroup({ group, index, defaultExpanded = true }: DateGroupProps) {
+export default function DateGroup({ group, index, defaultExpanded = true, insights }: DateGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const dominantConfig = categoryConfig[group.dominantCategory] ?? categoryConfig.OTHER
   const dominantLabel = group.dominantCategory
@@ -156,6 +157,7 @@ export default function DateGroup({ group, index, defaultExpanded = true }: Date
               key={activity.activityId}
               activity={activity}
               index={i}
+              insights={insights}
             />
           ))}
         </div>

@@ -351,9 +351,6 @@ fun CompanionStatusScreen(
             Text(text = "Companion Health", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(16.dp))
 
-            val healthState by viewModel.healthState.collectAsState()
-            android.util.Log.d("PermissionCheck", "Compose collected healthState: $healthState")
-            
             // Show overall health banner
             Card(
                 colors = CardDefaults.cardColors(
@@ -418,10 +415,7 @@ fun CompanionStatusScreen(
             }
 
             Button(
-                onClick = { 
-                    android.util.Log.d("ManualSync", "SyncNow Button clicked")
-                    viewModel.triggerLocalSync() 
-                },
+                onClick = { viewModel.triggerLocalSync() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = !uiState.isSyncing
             ) {

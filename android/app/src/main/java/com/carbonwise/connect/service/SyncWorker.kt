@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -34,6 +35,7 @@ class SyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
+        private const val TAG = "SyncWorker"
         private const val CHANNEL_ID = "carbonwise_sync"
         private const val WORK_NAME = "carbonwise_periodic_sync"
         private const val NOTIFICATION_ID = 1001
@@ -92,9 +94,6 @@ class SyncWorker @AssistedInject constructor(
 
             val smsResult = smsIngestionPipeline.runPipeline(lastSuccessfulUpload)
 
-            val notifFound = 0
-            val notifRelevant = 0
-
             val pendingQueueCount = pendingActivityRepository.countPending()
 
             var uploadSuccess = 0
@@ -107,43 +106,20 @@ class SyncWorker @AssistedInject constructor(
                         is ApiResult.Success -> {
                             uploadSuccess = syncResult.data?.successCount ?: 0
                             uploadFailed = syncResult.data?.failedCount ?: 0
-                            android.util.Log.d("MOBILE_SYNC", "Uploading: $uploadSuccess")
                         }
                         is ApiResult.Error -> {
                             uploadFailed = pendingQueueCount
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("SYNC_DEBUG", "syncBatch failed", e)
+                    Log.e(TAG, "syncBatch failed", e)
                     throw e
                 }
-            } else {
-                android.util.Log.d("MOBILE_SYNC", "Uploading: 0")
             }
 
             val remainingQueueCount = pendingActivityRepository.countPending()
 
-            val logMessage = """
-                ========== Sync Cycle ==========
-                SMS Scan
-                Found: ${smsResult.found}
-                Relevant: ${smsResult.relevant}
-                Duplicates: ${smsResult.duplicates}
-                Notification Scan
-                Found: $notifFound
-                Relevant: $notifRelevant
-                Pending Queue:
-                $pendingQueueCount activities
-                Uploading...
-                Backend
-                Success: $uploadSuccess
-                Failed: $uploadFailed
-                Room Queue Remaining:
-                $remainingQueueCount
-                ========== Sync Complete ==========
-            """.trimIndent()
-            
-            android.util.Log.i("SyncWorker", "\n$logMessage")
+            Log.i(TAG, "Sync complete: SMS(found=${smsResult.found}, relevant=${smsResult.relevant}, saved=${smsResult.newActivitiesSaved}), Upload(success=$uploadSuccess, failed=$uploadFailed), Queue(remaining=$remainingQueueCount)")
 
             if (uploadFailed > 0) {
                 return Result.retry()
@@ -151,7 +127,7 @@ class SyncWorker @AssistedInject constructor(
                 return Result.success()
             }
         } catch (exception: Exception) {
-            android.util.Log.e("SYNC_DEBUG", "Stage 1 failed", exception)
+            Log.e(TAG, "Sync cycle failed", exception)
             return Result.retry()
         }
     }

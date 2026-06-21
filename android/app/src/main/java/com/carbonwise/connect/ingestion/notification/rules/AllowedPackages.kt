@@ -45,7 +45,7 @@ object AllowedPackages {
         // E-commerce / shipping
         "com.amazon.mShop.android.shopping", // Amazon Shopping
         "com.amazon.delivery",               // Amazon Delivery
-        "com FedEx.mobile",                  // FedEx
+        "com.fedex.mobile",                  // FedEx
         "com.ups.android",                   // UPS
 
         // Energy / utilities

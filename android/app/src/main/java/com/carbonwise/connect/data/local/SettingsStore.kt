@@ -28,7 +28,7 @@ class SettingsStore @Inject constructor(
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val NOTIFICATION_SYNC_ENABLED = booleanPreferencesKey("notification_sync_enabled")
         val SMS_SYNC_ENABLED = booleanPreferencesKey("sms_sync_enabled")
-        val LAST_SYNC_TIME = longPreferencesKey("last_sync_time") // Legacy, keeping for compatibility if needed elsewhere
+        val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
         val LAST_SMS_SCAN_TIMESTAMP = longPreferencesKey("last_sms_scan_timestamp")
         val LAST_SUCCESSFUL_UPLOAD_TIMESTAMP = longPreferencesKey("last_successful_upload_timestamp")
     }
@@ -77,9 +77,7 @@ class SettingsStore @Inject constructor(
     }
 
     suspend fun setLastSuccessfulUploadTimestamp(time: Long) {
-        android.util.Log.d("UploadPipeline", "SettingsStore.setLastSuccessfulUploadTimestamp(time=$time) called")
         context.dataStore.edit { it[Keys.LAST_SUCCESSFUL_UPLOAD_TIMESTAMP] = time }
-        android.util.Log.d("UploadPipeline", "SettingsStore.setLastSuccessfulUploadTimestamp() completed")
     }
 
     suspend fun clearAll() {

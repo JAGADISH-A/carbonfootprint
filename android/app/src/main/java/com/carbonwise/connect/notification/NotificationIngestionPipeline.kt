@@ -19,27 +19,12 @@ class NotificationIngestionPipeline @Inject constructor(
 
     suspend fun processNotification(rawNotification: RawNotification) = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Stage 3: pipeline.processNotification() entered")
-            Log.d(TAG, "Notification received from package: ${rawNotification.packageName}")
-
             if (filter.isUseful(rawNotification)) {
-                Log.d(TAG, "Notification accepted from package: ${rawNotification.packageName}")
-                
-                Log.d(TAG, "Stage 4: Notification normalization started")
                 val pendingActivity = normalizer.normalize(rawNotification)
-                Log.d(TAG, "Stage 6: Duplicate detection (inserting to repository)")
-                val wasInserted = repository.insertActivity(pendingActivity)
-                
-                if (wasInserted) {
-                    Log.d(TAG, "Stage 9: Queue insert success (wasInserted=true)")
-                } else {
-                    Log.d(TAG, "Stage 6: Duplicate detection (ignored duplicate)")
-                }
-            } else {
-                Log.d(TAG, "Notification ignored (filtered out)")
+                repository.insertActivity(pendingActivity)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Stage 3/4/6/9 failed", e)
+            Log.e(TAG, "Failed to process notification", e)
         }
     }
 }

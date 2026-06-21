@@ -8,7 +8,9 @@ import {
   StatusBar,
   ActionCard,
   useActionRecommendations,
+  CarbonJourney,
 } from '@/components/home'
+import EmptyStateCard from '@/components/common/EmptyStateCard'
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -182,13 +184,18 @@ export default function Home() {
         </motion.div>
       )}
 
+      {/* ── 4.5. CARBON JOURNEY ───────────────────────────────────── */}
+      <motion.div variants={fadeUp} className="mb-5">
+        <CarbonJourney analytics={analytics} coach={coach} loading={loading} />
+      </motion.div>
+
       {/* ── 5. RECENT ACTIVITY ──────────────────────────────────────── */}
       <motion.div variants={fadeUp} className="mb-5">
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-emerald-600" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-ink">Recent activity</h3>
@@ -208,20 +215,36 @@ export default function Home() {
           </div>
 
           {loading ? (
-            <div className="space-y-2 py-2 animate-pulse">
-              <div className="h-10 bg-gray-200 rounded w-full" />
-              <div className="h-10 bg-gray-200 rounded w-full" />
-              <div className="h-10 bg-gray-200 rounded w-full" />
+            <div className="space-y-3 py-2 animate-pulse">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="skeleton w-9 h-9 rounded-xl" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="skeleton w-28 h-3" />
+                    <div className="skeleton w-20 h-2.5" />
+                  </div>
+                  <div className="skeleton w-12 h-4" />
+                </div>
+              ))}
             </div>
           ) : !hasData ? (
-            <div className="text-center py-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-2">
-                <span className="text-lg">📄</span>
-              </div>
-              <p className="text-xs text-ink-muted max-w-[180px] mx-auto">
-                Upload a receipt to see your activity feed.
-              </p>
-            </div>
+            <EmptyStateCard
+              emoji="📄"
+              title="No activities yet"
+              description="Upload a receipt to see your activity feed and track your carbon impact."
+              size="sm"
+              action={
+                <motion.button
+                  onClick={() => navigate('/upload')}
+                  whileHover={{ scale: 1.03, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="btn-primary text-sm inline-flex items-center gap-2"
+                >
+                  Upload receipt
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              }
+            />
           ) : (
             <div className="space-y-0">
               {activities.map((activity: TopEmissionActivity) => {
@@ -232,9 +255,9 @@ export default function Home() {
                 return (
                   <div
                     key={activity.activityId}
-                    className="flex items-center gap-3 py-2 border-b border-border-light/50 last:border-0"
+                    className="flex items-center gap-3 py-2.5 border-b border-border-light/50 last:border-0"
                   >
-                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                    <div className={`w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
                       {config.icon}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -258,38 +281,43 @@ export default function Home() {
 
       {/* ── 6. SUPPORTING METRICS (compact row) ─────────────────────── */}
       {loading ? (
-        <div className="grid grid-cols-4 gap-2 mb-5 animate-pulse">
-          <div className="h-16 bg-gray-100 rounded-xl" />
-          <div className="h-16 bg-gray-100 rounded-xl" />
-          <div className="h-16 bg-gray-100 rounded-xl" />
-          <div className="h-16 bg-gray-100 rounded-xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+          {[0, 1, 2, 3].map((i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="h-20 skeleton"
+            />
+          ))}
         </div>
       ) : hasData && (
         <motion.div variants={fadeUp} className="mb-5">
-          <div className="grid grid-cols-4 gap-2">
-            <div className="rounded-xl bg-cream-50/50 border border-border-light/50 p-2.5 text-center">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-0.5" />
-              <p className="text-base font-bold text-ink leading-none">{totalKg.toFixed(1)}</p>
-              <p className="text-[9px] text-ink-faint mt-0.5">Total kg</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div className="rounded-xl bg-gradient-to-br from-emerald-50/80 to-leaf-50/40 border border-emerald-100/60 p-3 text-center">
+              <TrendingUp className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+              <p className="text-lg font-bold text-ink leading-none">{totalKg.toFixed(1)}</p>
+              <p className="text-[10px] text-ink-faint mt-0.5">Total kg</p>
             </div>
-            <div className="rounded-xl bg-cream-50/50 border border-border-light/50 p-2.5 text-center">
-              <Activity className="w-3.5 h-3.5 text-amber-500 mx-auto mb-0.5" />
-              <p className="text-base font-bold text-ink leading-none">{avgDaily.toFixed(1)}</p>
-              <p className="text-[9px] text-ink-faint mt-0.5">Daily avg</p>
+            <div className="rounded-xl bg-gradient-to-br from-amber-50/80 to-orange-50/40 border border-amber-100/60 p-3 text-center">
+              <Activity className="w-4 h-4 text-amber-500 mx-auto mb-1" />
+              <p className="text-lg font-bold text-ink leading-none">{avgDaily.toFixed(1)}</p>
+              <p className="text-[10px] text-ink-faint mt-0.5">Daily avg</p>
             </div>
-            <div className="rounded-xl bg-cream-50/50 border border-border-light/50 p-2.5 text-center">
-              <Flame className="w-3.5 h-3.5 text-orange-500 mx-auto mb-0.5" />
-              <p className="text-base font-bold text-ink leading-none truncate">
+            <div className="rounded-xl bg-gradient-to-br from-orange-50/80 to-red-50/40 border border-orange-100/60 p-3 text-center">
+              <Flame className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+              <p className="text-sm font-bold text-ink leading-none truncate">
                 {topCategory
                   ? topCategory.category.charAt(0) + topCategory.category.slice(1).toLowerCase()
                   : '—'}
               </p>
-              <p className="text-[9px] text-ink-faint mt-0.5">Top source</p>
+              <p className="text-[10px] text-ink-faint mt-0.5">Top source</p>
             </div>
-            <div className="rounded-xl bg-cream-50/50 border border-border-light/50 p-2.5 text-center">
+            <div className="rounded-xl bg-gradient-to-br from-teal-50/80 to-emerald-50/40 border border-teal-100/60 p-3 text-center">
               <span className="text-sm">📄</span>
-              <p className="text-base font-bold text-ink leading-none mt-0.5">{activityCount}</p>
-              <p className="text-[9px] text-ink-faint mt-0.5">Activities</p>
+              <p className="text-lg font-bold text-ink leading-none mt-0.5">{activityCount}</p>
+              <p className="text-[10px] text-ink-faint mt-0.5">Activities</p>
             </div>
           </div>
         </motion.div>
@@ -297,7 +325,11 @@ export default function Home() {
 
       {/* ── 7. COACH CTA ────────────────────────────────────────────── */}
       {loading ? (
-        <div className="h-16 bg-gray-100 rounded-xl animate-pulse mb-5" />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="h-16 skeleton mb-5"
+        />
       ) : hasData && (
         <motion.div variants={fadeUp}>
           <button

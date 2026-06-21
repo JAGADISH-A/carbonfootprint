@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Clock, TrendingUp, Calendar } from 'lucide-react'
-import { getCarbonAnalytics } from '@/api/services'
+import { ArrowRight, Clock, TrendingUp, Calendar, Search, X } from 'lucide-react'
+import { getCarbonAnalytics, getCarbonInsights } from '@/api/services'
 import { useDashboard } from '@/api/DashboardContext'
-import type { CarbonAnalyticsResponse, TopEmissionActivity } from '@/types/activity'
+import type { CarbonAnalyticsResponse, CarbonInsightResponse, TopEmissionActivity } from '@/types/activity'
 import { DateGroup, CategoryFilter } from '@/components/history'
 import type { DateGroupData, CategoryFilterValue } from '@/components/history'
 import EmptyStateCard from '@/components/common/EmptyStateCard'
@@ -164,10 +164,12 @@ export default function Activities() {
   const navigate = useNavigate()
   const { lastUpdated } = useDashboard()
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
+  const [insights, setInsights] = useState<CarbonInsightResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('all')
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilterValue>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
@@ -184,13 +186,17 @@ export default function Activities() {
       d.setMonth(d.getMonth() - 1)
       params.from = d.toISOString()
     }
-    getCarbonAnalytics(params, controller.signal)
-      .then((res) => {
-        if (res.success && res.data) {
-          setAnalytics(res.data)
+    Promise.all([
+      getCarbonAnalytics(params, controller.signal),
+      getCarbonInsights(params, controller.signal),
+    ])
+      .then(([aRes, iRes]) => {
+        if (aRes.success && aRes.data) {
+          setAnalytics(aRes.data)
         } else {
           setError(true)
         }
+        if (iRes.success && iRes.data) setInsights(iRes.data)
       })
       .catch((err) => {
         if (err?.name !== 'AbortError') setError(true)
@@ -202,11 +208,27 @@ export default function Activities() {
   const activities = analytics?.topActivities ?? []
   const hasData = activities.length > 0
 
-  // Filter activities by category
+  // Filter activities by category and search query
   const filteredActivities = useMemo(() => {
-    if (!selectedCategory) return activities
-    return activities.filter((a) => a.category === selectedCategory)
-  }, [activities, selectedCategory])
+    let result = activities
+    if (selectedCategory) {
+      result = result.filter((a) => a.category === selectedCategory)
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      result = result.filter((a) => {
+        const merchant = (a.merchant || '').toLowerCase()
+        const category = (a.category || '').toLowerCase()
+        const label = category.charAt(0) + category.slice(1).toLowerCase()
+        return (
+          merchant.includes(query) ||
+          category.includes(query) ||
+          label.includes(query)
+        )
+      })
+    }
+    return result
+  }, [activities, selectedCategory, searchQuery])
 
   // Group activities by time period
   const dateGroups = useMemo(
@@ -281,25 +303,31 @@ export default function Activities() {
       ) : loading ? (
         <div className="space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card p-4 animate-pulse">
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className="card"
+            >
               <div className="flex items-center gap-4 mb-3">
-                <div className="skeleton w-24 h-5 bg-gray-200" />
-                <div className="skeleton w-16 h-4 bg-gray-200" />
-                <div className="skeleton w-20 h-4 bg-gray-200" />
+                <div className="skeleton w-24 h-5" />
+                <div className="skeleton w-16 h-4" />
+                <div className="skeleton w-20 h-4" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {[0, 1].map((j) => (
                   <div key={j} className="flex gap-3">
-                    <div className="skeleton w-10 h-10 rounded-xl bg-gray-200" />
+                    <div className="skeleton w-10 h-10 rounded-xl" />
                     <div className="flex-1 space-y-2">
-                      <div className="skeleton w-32 h-3 bg-gray-200" />
-                      <div className="skeleton w-48 h-2.5 bg-gray-200" />
+                      <div className="skeleton w-32 h-3" />
+                      <div className="skeleton w-48 h-2.5" />
                     </div>
-                    <div className="skeleton w-12 h-5 bg-gray-200" />
+                    <div className="skeleton w-12 h-5" />
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       ) : !hasData ? (
@@ -336,6 +364,30 @@ export default function Activities() {
             />
           </motion.div>
 
+          {/* ── Search Bar ────────────────────────────────────────────── */}
+          {hasData && (
+            <motion.div variants={fadeUp}>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by merchant, category, or activity..."
+                  className="w-full pl-10 pr-10 py-2.5 bg-card border border-border-light rounded-xl text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-surface transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5 text-ink-muted" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Summary Stats ─────────────────────────────────────────── */}
           <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="card p-3 text-center">
@@ -369,16 +421,39 @@ export default function Activities() {
           </motion.div>
 
           {/* ── Timeline Groups ───────────────────────────────────────── */}
-          <motion.div variants={fadeUp} className="space-y-4">
-            {dateGroups.map((group, i) => (
-              <DateGroup
-                key={group.label}
-                group={group}
-                index={i}
-                defaultExpanded={i < 2}
-              />
-            ))}
-          </motion.div>
+          {dateGroups.length > 0 ? (
+            <motion.div variants={fadeUp} className="space-y-4">
+              {dateGroups.map((group, i) => (
+                <DateGroup
+                  key={group.label}
+                  group={group}
+                  index={i}
+                  defaultExpanded={i < 2}
+                  insights={insights}
+                />
+              ))}
+            </motion.div>
+          ) : searchQuery ? (
+            <motion.div variants={fadeUp}>
+              <div className="card">
+                <EmptyStateCard
+                  emoji="🔍"
+                  title="No results found"
+                  description={`No activities match "${searchQuery}". Try a different search term or clear the filter.`}
+                  size="sm"
+                  action={
+                    <button
+                      onClick={() => { setSearchQuery(''); setSelectedCategory(null) }}
+                      className="btn-secondary text-sm inline-flex items-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear search
+                    </button>
+                  }
+                />
+              </div>
+            </motion.div>
+          ) : null}
 
           {/* ── Pattern Insight ───────────────────────────────────────── */}
           {activities.length >= 3 && (

@@ -27,14 +27,14 @@ body {
 
 @layer components {
   .card {
-    @apply bg-card rounded-2xl p-4 shadow-card border border-border-light;
+    @apply bg-card rounded-2xl p-5 shadow-card border border-border-light;
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 0.3s ease;
   }
 
   .card-interactive {
-    @apply bg-card rounded-2xl p-4 shadow-card border border-border-light
+    @apply bg-card rounded-2xl p-5 shadow-card border border-border-light
            cursor-pointer;
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
@@ -43,6 +43,10 @@ body {
   .card-interactive:hover {
     @apply shadow-card-md border-border;
     transform: translateY(-2px);
+  }
+
+  .card-compact {
+    @apply bg-card rounded-2xl p-4 shadow-card border border-border-light;
   }
 
   .btn-primary {
@@ -92,6 +96,40 @@ body {
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s linear infinite;
+  }
+
+  /* Section heading pattern */
+  .section-header {
+    @apply flex items-center gap-2.5 mb-3;
+  }
+  .section-header-icon {
+    @apply w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0;
+  }
+  .section-header-text h2 {
+    @apply text-sm font-semibold text-ink;
+  }
+  .section-header-text p {
+    @apply text-[11px] text-ink-muted;
+  }
+
+  /* Smooth focus ring for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white;
+  }
+
+  /* Button press feedback */
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  /* Stat card hover lift */
+  .stat-card {
+    @apply transition-all duration-300;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(16, 185, 129, 0.1), 0 4px 10px -5px rgba(16, 185, 129, 0.04);
   }
 }
 

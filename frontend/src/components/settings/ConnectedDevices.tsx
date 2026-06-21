@@ -81,27 +81,27 @@ export default function ConnectedDevices() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
-          <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm animate-pulse">
-            <div className="h-5 bg-gray-200 rounded w-40 mb-3" />
-            <div className="h-4 bg-gray-200 rounded w-56 mb-4" />
-            <div className="h-10 bg-gray-200 rounded w-36" />
+          <div className="card animate-pulse">
+            <div className="skeleton h-5 w-40 mb-3" />
+            <div className="skeleton h-4 w-56 mb-4" />
+            <div className="skeleton h-10 w-36" />
           </div>
           <div className="space-y-4">
-            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-48 mb-4" />
+            <div className="card animate-pulse">
+              <div className="skeleton h-5 w-48 mb-4" />
               <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-4 bg-gray-200 rounded" />
+                  <div key={i} className="skeleton h-4 rounded" />
                 ))}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-20 mb-3" />
+                <div key={i} className="card animate-pulse">
+                  <div className="skeleton h-4 w-20 mb-3" />
                   <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-full" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
+                    <div className="skeleton h-3 w-full" />
+                    <div className="skeleton h-3 w-3/4" />
                   </div>
                 </div>
               ))}

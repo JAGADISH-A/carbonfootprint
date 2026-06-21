@@ -1,65 +1,54 @@
 import { motion } from 'framer-motion'
 import { Shield, AlertTriangle, Info } from 'lucide-react'
-import type { TopEmissionActivity } from '@/types/activity'
+import type { TopEmissionActivity, CarbonInsightResponse } from '@/types/activity'
 import { categoryConfig } from '@/pages/insights/constants'
 
 interface ActivityCardProps {
   activity: TopEmissionActivity
   index: number
+  insights?: CarbonInsightResponse | null
 }
 
-// Simulated AI insights based on category
-const categoryInsights: Record<string, string[]> = {
-  FOOD: [
-    'Plant-based alternatives could reduce this by 60%',
-    'Consider meal planning to reduce waste',
-    'Local produce typically has lower emissions',
-  ],
-  TRANSPORT: [
-    'Cycling for short trips cuts this to zero',
-    'Public transit produces 4x less per passenger',
-    'Carpooling could halve this footprint',
-  ],
-  FUEL: [
-    'Combining errands reduces fuel use by 20-30%',
-    'Proper tire maintenance saves 3-5% fuel',
-    'Eco-driving techniques can reduce consumption',
-  ],
-  ELECTRICITY: [
-    'LED bulbs use 75% less energy',
-    'Unplugging idle devices saves 5-10%',
-    'Smart thermostats optimize heating/cooling',
-  ],
-  SHOPPING: [
-    'Second-hand options eliminate production emissions',
-    'Quality items last longer, reducing replacement',
-    'Choose products with minimal packaging',
-  ],
-  FLIGHT: [
-    'Direct flights produce less than connections',
-    'Carbon offsets can neutralize flight emissions',
-    'Consider trains for trips under 500km',
-  ],
-  WATER: [
-    'Fixing leaks saves thousands of liters yearly',
-    'Shorter showers reduce water heating energy',
-    'Efficient fixtures cut water use by 50%',
-  ],
-  GAS: [
-    'Lowering thermostat by 1°C saves 10% energy',
-    'Better insulation reduces heating needs',
-    'Programmable timers prevent wasted heating',
-  ],
-  OTHER: [
-    'Small changes in daily habits add up',
-    'Tracking helps identify reduction opportunities',
-    'Every action makes a difference',
-  ],
-}
+// Backend-aware insight derivation: uses actual insight data when available,
+// falls back to context-aware generic insights based on activity properties.
+function getInsight(
+  activity: TopEmissionActivity,
+  insights: CarbonInsightResponse | null | undefined,
+  index: number
+): string {
+  // If backend provides recommendations, use the most relevant one
+  if (insights?.recommendations && insights.recommendations.length > 0) {
+    // Try to find a category-specific recommendation
+    const categoryRec = insights.recommendations.find((r) => {
+      const lower = r.toLowerCase()
+      return lower.includes(activity.category.toLowerCase())
+    })
+    if (categoryRec) return categoryRec
+    // Use recommendation by index rotation for variety
+    return insights.recommendations[index % insights.recommendations.length]
+  }
 
-function getInsight(category: string, index: number): string {
-  const insights = categoryInsights[category] ?? categoryInsights.OTHER
-  return insights[index % insights.length]
+  // If backend provides insights, use them
+  if (insights?.insights && insights.insights.length > 0) {
+    return insights.insights[index % insights.insights.length]
+  }
+
+  // If backend provides warnings and this is a high-emission activity
+  if (insights?.warnings && insights.warnings.length > 0 && Number(activity.carbonKg ?? 0) > 5) {
+    return insights.warnings[0]
+  }
+
+  // Context-aware fallback: derive insight from activity properties
+  const kg = Number(activity.carbonKg ?? 0)
+  const hasMerchant = !!activity.merchant
+
+  if (kg > 20) {
+    return `This ${activity.category.toLowerCase()} activity generated ${kg.toFixed(1)} kg CO₂e — one of your higher-impact purchases`
+  }
+  if (hasMerchant) {
+    return `Tracked from ${activity.merchant} — check your coach for personalized reduction tips`
+  }
+  return `Your ${activity.category.toLowerCase()} activity has been analyzed for carbon impact`
 }
 
 function getConfidence(activity: TopEmissionActivity): 'high' | 'medium' | 'low' {
@@ -81,11 +70,11 @@ function formatTime(dateStr: string): string {
   })
 }
 
-export default function ActivityCard({ activity, index }: ActivityCardProps) {
+export default function ActivityCard({ activity, index, insights }: ActivityCardProps) {
   const config = categoryConfig[activity.category] ?? categoryConfig.OTHER
   const label = activity.category.charAt(0) + activity.category.slice(1).toLowerCase()
   const confidence = getConfidence(activity)
-  const insight = getInsight(activity.category, index)
+  const insight = getInsight(activity, insights, index)
 
   const confidenceConfig = {
     high: { label: 'High', color: 'bg-emerald-100 text-emerald-700', icon: Shield },

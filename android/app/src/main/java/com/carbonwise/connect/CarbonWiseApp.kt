@@ -22,5 +22,6 @@ class CarbonWiseApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        com.carbonwise.connect.service.SyncWorker.schedule(this)
     }
 }

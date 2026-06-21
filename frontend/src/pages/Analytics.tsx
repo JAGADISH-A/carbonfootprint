@@ -10,6 +10,9 @@ import MonthlyTrend from './insights/MonthlyTrend'
 import CategoryBreakdown from './insights/CategoryBreakdown'
 import ActivityTimeline from './insights/ActivityTimeline'
 import AchievementBadges from './insights/AchievementBadges'
+import EmptyStateCard from '@/components/common/EmptyStateCard'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 
 function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
@@ -26,6 +29,7 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
 }
 
 export default function Analytics() {
+  const navigate = useNavigate()
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
   const [insights, setInsights] = useState<CarbonInsightResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -78,39 +82,58 @@ export default function Analytics() {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="card flex flex-col items-center py-8">
-            <div className="skeleton w-40 h-40 rounded-full mb-4 animate-pulse bg-gray-200" />
-            <div className="skeleton w-28 h-4 animate-pulse bg-gray-200" />
-          </div>
-          <div className="card">
-            <div className="skeleton w-32 h-5 mb-4 animate-pulse bg-gray-200" />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="card flex flex-col items-center py-8"
+          >
+            <div className="skeleton w-40 h-40 rounded-full mb-4" />
+            <div className="skeleton w-28 h-4" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.05 }}
+            className="card"
+          >
+            <div className="skeleton w-32 h-5 mb-4" />
             <div className="grid grid-cols-2 gap-3">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-20 rounded-xl animate-pulse bg-gray-200" />
+                <div key={i} className="skeleton h-20 rounded-xl" />
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="card">
-            <div className="skeleton w-36 h-5 mb-4 animate-pulse bg-gray-200" />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="card"
+          >
+            <div className="skeleton w-36 h-5 mb-4" />
             <div className="flex gap-2 h-28">
               {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex-1 skeleton rounded-xl animate-pulse bg-gray-200" />
+                <div key={i} className="flex-1 skeleton rounded-xl" />
               ))}
             </div>
-          </div>
-          <div className="card space-y-3">
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="card space-y-3"
+          >
             {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="skeleton w-8 h-8 rounded-lg bg-gray-200" />
+              <div key={i} className="flex items-center gap-3">
+                <div className="skeleton w-8 h-8 rounded-lg" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="skeleton w-20 h-2.5 bg-gray-200" />
-                  <div className="skeleton w-full h-1.5 rounded-full bg-gray-200" />
+                  <div className="skeleton w-20 h-2.5" />
+                  <div className="skeleton w-full h-1.5 rounded-full" />
                 </div>
               </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
     )
@@ -138,20 +161,32 @@ export default function Analytics() {
 
   if (!hasData) {
     return (
-      <div className="card p-8 text-center max-w-md mx-auto my-12">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-50 to-leaf-50 border border-emerald-100/50 flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl">📊</span>
-        </div>
-        <h3 className="text-lg font-bold text-ink mb-2">No carbon analytics yet</h3>
-        <p className="text-sm text-ink-muted mb-6 leading-relaxed">
-          Your carbon dashboard will populate automatically once you pair a companion device or upload receipts.
-        </p>
-        <button
-          onClick={() => fetchData()}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm transition-colors"
-        >
-          Refresh Data
-        </button>
+      <div className="card">
+        <EmptyStateCard
+          emoji="📊"
+          title="No carbon analytics yet"
+          description="Your carbon dashboard will populate automatically once you pair a companion device or upload receipts."
+          size="lg"
+          action={
+            <div className="flex items-center gap-3">
+              <motion.button
+                onClick={() => navigate('/upload')}
+                whileHover={{ scale: 1.03, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                Upload receipt
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+              <button
+                onClick={() => fetchData()}
+                className="btn-ghost text-sm"
+              >
+                Refresh
+              </button>
+            </div>
+          }
+        />
       </div>
     )
   }

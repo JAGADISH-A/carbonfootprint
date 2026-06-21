@@ -29,16 +29,6 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun onListenerConnected() {
-        super.onListenerConnected()
-        Log.d(TAG, "Notification listener connected")
-    }
-
-    override fun onListenerDisconnected() {
-        super.onListenerDisconnected()
-        Log.d(TAG, "Notification listener disconnected")
-    }
-
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         scope.launch {
             try {
@@ -69,11 +59,6 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        // No-op: we only collect, don't need to track removals
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "Notification listener destroyed")
+        // No-op
     }
 }

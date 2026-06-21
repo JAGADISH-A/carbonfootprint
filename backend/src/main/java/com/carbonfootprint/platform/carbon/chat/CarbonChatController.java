@@ -42,7 +42,7 @@ public class CarbonChatController {
         } catch (Exception e) {
             log.error("Chat endpoint error: userId={} error={}", userId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("500", "Chat service temporarily unavailable. Please try again."));
+                    .body(ApiResponse.error("Chat service temporarily unavailable. Please try again.", "CHAT_SERVICE_UNAVAILABLE"));
         }
     }
 

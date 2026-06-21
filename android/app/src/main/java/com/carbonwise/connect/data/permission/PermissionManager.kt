@@ -46,9 +46,8 @@ class PermissionManager @Inject constructor(
     private fun checkSmsPermission(): Boolean {
         val readSms = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
         val receiveSms = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
-        val postNotif = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-        return receiveSms // Currently using receiveSms based on previous fix
+        return readSms && receiveSms
     }
 
     private fun checkNotificationListener(): Boolean {

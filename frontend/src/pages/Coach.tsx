@@ -5,6 +5,7 @@ import { ArrowRight, RefreshCw, BarChart3 } from 'lucide-react'
 import { getAICoach, getCarbonAnalytics } from '@/api/services'
 import type { AICarbonCoachResponse, CarbonAnalyticsResponse } from '@/types/activity'
 import { CarbonSummaryPanel, CoachChat } from '@/components/coach'
+import EmptyStateCard from '@/components/common/EmptyStateCard'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -50,38 +51,25 @@ export default function Coach() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="text-center py-8"
+        className="max-w-lg mx-auto py-8"
       >
-        <motion.div
-          className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"
-          animate={{
-            scale: [1, 1.05, 1],
-            boxShadow: [
-              '0 0 0 0 rgba(16,185,129,0)',
-              '0 0 0 8px rgba(16,185,129,0.06)',
-              '0 0 0 0 rgba(16,185,129,0)',
-            ],
-          }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <span className="text-2xl">🌱</span>
-        </motion.div>
-
-        <h1 className="text-lg font-bold text-ink mb-1.5">Hey there!</h1>
-        <p className="text-ink-muted max-w-xs mx-auto mb-5 leading-relaxed text-sm">
-          I'm EcoBuddy, your personal sustainability coach. Upload a receipt or two
-          and I'll analyze your carbon footprint.
-        </p>
-
-        <motion.button
-          onClick={() => navigate('/upload')}
-          whileHover={{ scale: 1.03, y: -1 }}
-          whileTap={{ scale: 0.97 }}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          Upload your first receipt
-          <ArrowRight className="w-4 h-4" />
-        </motion.button>
+        <EmptyStateCard
+          emoji="🌱"
+          title="Hey there!"
+          description="I'm EcoBuddy, your personal sustainability coach. Upload a receipt or two and I'll analyze your carbon footprint."
+          size="lg"
+          action={
+            <motion.button
+              onClick={() => navigate('/upload')}
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              Upload your first receipt
+              <ArrowRight className="w-4 h-4" />
+            </motion.button>
+          }
+        />
       </motion.div>
     )
   }

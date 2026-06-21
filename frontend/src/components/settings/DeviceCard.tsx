@@ -38,27 +38,24 @@ export default function DeviceCard({ device, onRemove, isRemoving = false, compa
     setSyncState('requested')
     setErrorText('')
     
-    // Simulate real-time sync steps while hitting the thin orchestrator
-    setTimeout(async () => {
-      setSyncState('syncing')
-      try {
-        const response = await syncDevice(device.deviceId)
-        if (response.success) {
-          setSyncState('completed')
-          // Auto-refresh queries in dashboard context
-          await refreshAll()
-          setTimeout(() => {
-            setSyncState('idle')
-          }, 1500)
-        } else {
-          setSyncState('failed')
-          setErrorText(response.message || 'Sync failed')
-        }
-      } catch (err: any) {
+    // Drive state from actual sync lifecycle
+    setSyncState('syncing')
+    try {
+      const response = await syncDevice(device.deviceId)
+      if (response.success) {
+        setSyncState('completed')
+        await refreshAll()
+        setTimeout(() => {
+          setSyncState('idle')
+        }, 1500)
+      } else {
         setSyncState('failed')
-        setErrorText(err.userMessage || 'An error occurred during sync')
+        setErrorText(response.message || 'Sync failed')
       }
-    }, 800)
+    } catch (err: any) {
+      setSyncState('failed')
+      setErrorText(err.userMessage || 'An error occurred during sync')
+    }
   }
 
   const renderSyncStatus = () => {

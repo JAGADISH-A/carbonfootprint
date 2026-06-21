@@ -34,19 +34,11 @@ class TokenManager @Inject constructor(
             .apply()
     }
 
-    fun getDeviceToken(): String? {
-        val token = sharedPreferences.getString("device_token", null)
-        android.util.Log.d("UploadPipeline", "TokenManager.getDeviceToken() returning: ${if (token != null) "token present (length: ${token.length})" else "null"}")
-        return token
-    }
+    fun getDeviceToken(): String? = sharedPreferences.getString("device_token", null)
 
     fun getRefreshToken(): String? = sharedPreferences.getString("refresh_token", null)
 
-    fun getDeviceId(): String? {
-        val devId = sharedPreferences.getString("device_id", null)
-        android.util.Log.d("UploadPipeline", "TokenManager.getDeviceId() returning: $devId")
-        return devId
-    }
+    fun getDeviceId(): String? = sharedPreferences.getString("device_id", null)
 
     fun saveDeviceId(deviceId: String) {
         sharedPreferences.edit()
@@ -69,7 +61,6 @@ class TokenManager @Inject constructor(
     fun isTokenExpired(): Boolean {
         val expiry = getTokenExpiry()
         if (expiry == 0L) return true
-        // Consider token expired if it expires within the next 60 seconds
         return System.currentTimeMillis() > (expiry - 60000)
     }
 }
