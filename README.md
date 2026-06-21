@@ -12,7 +12,7 @@ Automatic carbon tracking from receipts, SMS, and notifications — powered by A
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 
-[Live App](https://carbon-backend-890856260681.us-central1.run.app/) · [Deployment Guide](DEPLOYMENT.md)
+[Live App](https://carbon-frontend-890856260681.us-central1.run.app/) · [Deployment Guide](DEPLOYMENT.md)
 
 </div>
 
@@ -55,9 +55,7 @@ CarbonWise solves all of this with automatic data capture and AI-powered coachin
 - AI Coach
 - Settings
 
-> *(Add screenshots here)*
 
----
 
 ### Android Companion
 

@@ -184,6 +184,7 @@ export interface ChatMessage {
   content: string
   timestamp?: number
   cards?: ChatCardData[]
+  suggestedQuestions?: string[]
 }
 
 export interface ChatCardData {
@@ -201,4 +202,5 @@ export interface ChatRequest {
 export interface ChatResponse {
   reply: string
   cards?: ChatCardData[]
+  suggestedQuestions?: string[]
 }

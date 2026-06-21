@@ -36,32 +36,32 @@ export default function ChatMessage({ message, isLast }: ChatMessageProps) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex gap-2.5 group ${isLast ? '' : 'mb-3'}`}
+      className={`flex gap-3 items-start ${isLast ? '' : ''}`}
     >
-      {/* Avatar */}
+      {/* Avatar — aligned to top of bubble */}
       <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
           isUser
             ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
             : 'bg-gradient-to-br from-emerald-600 to-emerald-700'
         }`}
       >
         {isUser ? (
-          <User className="w-3.5 h-3.5 text-white" />
+          <User className="w-4 h-4 text-white" />
         ) : (
-          <Sparkles className="w-3.5 h-3.5 text-white" />
+          <Sparkles className="w-4 h-4 text-white" />
         )}
       </div>
 
       {/* Message body */}
       <div className={`flex-1 min-w-0 ${isUser ? 'flex flex-col items-end' : ''}`}>
         {/* Label + timestamp */}
-        <div className={`flex items-center gap-1.5 mb-0.5 ${isUser ? 'flex-row-reverse' : ''}`}>
-          <span className="text-[10px] font-semibold text-ink-muted">
+        <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : ''}`}>
+          <span className="text-[12px] font-semibold text-ink-muted">
             {isUser ? 'You' : 'EcoBuddy'}
           </span>
           {message.timestamp && (
-            <span className="text-[9px] text-ink-faint">
+            <span className="text-[11px] text-ink-faint">
               {formatTime(message.timestamp)}
             </span>
           )}
@@ -69,7 +69,7 @@ export default function ChatMessage({ message, isLast }: ChatMessageProps) {
 
         {/* Bubble */}
         <div
-          className={`relative rounded-xl px-3 py-2 text-[13px] leading-relaxed max-w-[80%] ${
+          className={`relative rounded-2xl px-4 py-3 text-[15px] leading-[1.6] max-w-[780px] ${
             isUser
               ? 'bg-emerald-600 text-white rounded-br-md shadow-sm shadow-emerald-200'
               : 'bg-white border border-border-light text-ink rounded-bl-md shadow-sm'
@@ -78,12 +78,12 @@ export default function ChatMessage({ message, isLast }: ChatMessageProps) {
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
-            <div className="prose prose-sm prose-emerald max-w-none
-              prose-p:my-1 prose-p:leading-relaxed
+            <div className="prose prose-base prose-emerald max-w-none
+              prose-p:my-1.5 prose-p:leading-[1.6]
               prose-strong:text-ink
-              prose-ul:my-1 prose-li:my-0.5
-              prose-headings:my-1.5 prose-headings:text-ink
-              prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+              prose-ul:my-1.5 prose-li:my-0.5
+              prose-headings:my-2 prose-headings:text-ink
+              prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
               [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <Markdown>{message.content}</Markdown>
             </div>
@@ -92,26 +92,26 @@ export default function ChatMessage({ message, isLast }: ChatMessageProps) {
 
         {/* Cards */}
         {hasCards && (
-          <div className="mt-1.5 max-w-[95%]">
+          <div className="mt-2 max-w-[95%]">
             <ChatCards cards={message.cards!} />
           </div>
         )}
 
         {/* Actions row (AI messages only) */}
         {!isUser && (
-          <div className="flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-ink-faint hover:text-ink-muted hover:bg-surface transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-ink-faint hover:text-ink-muted hover:bg-surface transition-colors"
             >
               {copied ? (
                 <>
-                  <Check className="w-2.5 h-2.5 text-emerald-500" />
+                  <Check className="w-3 h-3 text-emerald-500" />
                   <span className="text-emerald-600">Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-2.5 h-2.5" />
+                  <Copy className="w-3 h-3" />
                   Copy
                 </>
               )}

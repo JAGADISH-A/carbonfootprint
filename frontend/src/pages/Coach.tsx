@@ -51,7 +51,7 @@ export default function Coach() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="max-w-lg mx-auto py-8"
+        className="max-w-lg mx-auto py-16"
       >
         <EmptyStateCard
           emoji="🌱"
@@ -83,31 +83,31 @@ export default function Coach() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex items-center justify-between px-4 py-2 border-b border-border-light bg-white/80 backdrop-blur-sm flex-shrink-0"
+        className="flex items-center justify-between px-5 py-3 border-b border-border-light bg-white/80 backdrop-blur-sm flex-shrink-0"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
-            <span className="text-sm">🌱</span>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
+            <span className="text-lg">🌱</span>
           </div>
           <div>
-            <h1 className="text-xs font-bold text-ink tracking-tight">
+            <h1 className="text-sm font-bold text-ink tracking-tight">
               {greeting}
               {coach?.aiGenerated && (
-                <span className="ml-1.5 inline-flex items-center gap-0.5 text-emerald-600 font-medium text-[9px] bg-emerald-50 px-1 py-0.5 rounded-full">
+                <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 font-medium text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded-full">
                   AI
                 </span>
               )}
             </h1>
-            <p className="text-[10px] text-ink-muted">Carbon coach</p>
+            <p className="text-[12px] text-ink-muted">Carbon coach</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setSummaryOpen(!summaryOpen)}
-            className="lg:hidden text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"
+            className="lg:hidden text-[12px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-emerald-50"
           >
-            <BarChart3 className="w-2.5 h-2.5" />
+            <BarChart3 className="w-3.5 h-3.5" />
             {summaryOpen ? 'Hide' : 'Data'}
           </button>
 
@@ -115,9 +115,9 @@ export default function Coach() {
             onClick={() => fetchData()}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"
+            className="text-[12px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-emerald-50"
           >
-            <RefreshCw className="w-2.5 h-2.5" />
+            <RefreshCw className="w-3.5 h-3.5" />
             Refresh
           </motion.button>
         </div>
@@ -131,7 +131,7 @@ export default function Coach() {
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden border-b border-border-light bg-white/60"
         >
-          <div className="p-3 max-h-[50vh] overflow-y-auto">
+          <div className="p-4 max-h-[50vh] overflow-y-auto">
             <CarbonSummaryPanel coach={coach} analytics={analytics} loading={loading} />
           </div>
         </motion.div>
@@ -142,13 +142,13 @@ export default function Coach() {
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop summary sidebar */}
         <div className="hidden lg:block lg:w-[300px] xl:w-[340px] flex-shrink-0 border-r border-border-light bg-white/40 overflow-y-auto">
-          <div className="p-3">
+          <div className="p-4">
             <CarbonSummaryPanel coach={coach} analytics={analytics} loading={loading} />
           </div>
         </div>
 
         {/* Chat — always fills remaining space, input pinned to bottom */}
-        <div className="flex-1 min-w-0 p-3 flex flex-col overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <CoachChat enabled={hasData} />
         </div>
       </div>

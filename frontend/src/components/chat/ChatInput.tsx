@@ -45,8 +45,8 @@ export default function ChatInput({ onSend, disabled, autoFocus }: ChatInputProp
   }
 
   return (
-    <div className="border-t border-border-light bg-white px-3 py-2">
-      <div className="flex items-end gap-2">
+    <div className="bg-white rounded-2xl border border-border-light shadow-sm px-3 py-2.5">
+      <div className="flex items-end gap-2.5">
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
@@ -56,7 +56,7 @@ export default function ChatInput({ onSend, disabled, autoFocus }: ChatInputProp
             placeholder="Ask anything about your carbon footprint..."
             disabled={disabled}
             rows={1}
-            className="w-full resize-none rounded-lg border border-border bg-surface/80 px-3 py-2 text-[13px] text-ink placeholder:text-ink-faint focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full resize-none rounded-xl border-0 bg-transparent px-3 py-2 text-[15px] leading-[1.6] text-ink placeholder:text-ink-faint focus:outline-none focus:ring-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -65,9 +65,9 @@ export default function ChatInput({ onSend, disabled, autoFocus }: ChatInputProp
           disabled={!value.trim() || disabled}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.92 }}
-          className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+          className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
         >
-          <Send className="w-3.5 h-3.5" />
+          <Send className="w-4 h-4" />
         </motion.button>
       </div>
     </div>
