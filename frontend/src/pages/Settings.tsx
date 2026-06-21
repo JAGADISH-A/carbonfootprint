@@ -64,19 +64,7 @@ export default function Settings() {
           )}
 
           {activeTab === 'mobile' && (
-            <div className="space-y-8">
-              <ConnectedDevices />
-              
-              {/* Future Expansion Sections */}
-              <div className="pt-8 border-t border-gray-100 opacity-50 pointer-events-none">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Sync Status</h3>
-                <p className="text-sm text-gray-500">Coming soon.</p>
-              </div>
-              <div className="pt-8 border-t border-gray-100 opacity-50 pointer-events-none">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Permissions</h3>
-                <p className="text-sm text-gray-500">Coming soon.</p>
-              </div>
-            </div>
+            <ConnectedDevices />
           )}
         </main>
       </div>
