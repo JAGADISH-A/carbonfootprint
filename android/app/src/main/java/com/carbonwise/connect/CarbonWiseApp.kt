@@ -14,7 +14,6 @@ class CarbonWiseApp : Application(), Configuration.Provider {
 
     override val workManagerConfiguration: Configuration
         get() {
-            android.util.Log.d("SYNC_DEBUG", "CarbonWiseApp: workManagerConfiguration getter called!")
             return Configuration.Builder()
                 .setWorkerFactory(workerFactory)
                 .setMinimumLoggingLevel(android.util.Log.DEBUG)
@@ -23,6 +22,5 @@ class CarbonWiseApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        android.util.Log.d("SYNC_DEBUG", "CarbonWiseApp: onCreate() called!")
     }
 }

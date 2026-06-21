@@ -7,6 +7,7 @@ import com.carbonfootprint.platform.mobile.model.Device;
 import com.carbonfootprint.platform.mobile.model.PairingCode;
 import com.carbonfootprint.platform.mobile.repository.DeviceRepository;
 import com.carbonfootprint.platform.mobile.repository.PairingCodeRepository;
+import com.carbonfootprint.platform.mobile.port.out.PendingActivityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,9 @@ public class PairingService {
     private final PairingCodeRepository pairingCodeRepository;
     private final DeviceRepository deviceRepository;
     private final DeviceTokenService deviceTokenService;
+    private final PendingActivityRepository pendingActivityRepository;
+    private final BatchEnrichmentService batchEnrichmentService;
+
     
     private static final String CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous chars like I, O, 1, 0
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -176,4 +180,34 @@ public class PairingService {
         }
         return sb.toString();
     }
+
+    /**
+     * Triggers synchronization processing for a device.
+     */
+    public void triggerDeviceSync(String deviceId, String userId) {
+        Device device = deviceRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Device not found: " + deviceId));
+
+        if (!device.getUserId().equals(userId)) {
+            throw new SecurityException("Device does not belong to user");
+        }
+
+        // Find all non-processed activities for this device
+        java.util.List<com.carbonfootprint.platform.mobile.model.PendingActivity> pending = 
+                pendingActivityRepository.findPendingByDeviceId(deviceId);
+
+        log.info("Triggering sync for device {} (pending activities count: {})", deviceId, pending.size());
+
+        // Process each pending activity asynchronously
+        for (com.carbonfootprint.platform.mobile.model.PendingActivity p : pending) {
+            batchEnrichmentService.enrichPendingActivity(p.getId());
+        }
+
+        // Update device status metadata
+        device.setLastSeenAt(Instant.now());
+        device.setLastSyncAt(Instant.now());
+        device.setLastUploadStatus(pending.isEmpty() ? "SUCCESS" : "PROCESSING");
+        deviceRepository.save(device);
+    }
 }
+

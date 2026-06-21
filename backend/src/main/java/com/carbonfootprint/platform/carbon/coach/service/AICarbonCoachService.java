@@ -129,7 +129,7 @@ public class AICarbonCoachService implements AICarbonCoachUseCase {
 
             AICarbonCoachResponse parsed = AiResponseParser.parse(aiResponse, true);
 
-            if (parsed.getSummary().isBlank()) {
+            if (parsed == null || parsed.getSummary() == null || parsed.getSummary().isBlank()) {
                 log.warn("AICarbonCoachService — parsed response has empty summary, falling back. " +
                         "Raw response (first 500 chars): {}",
                         aiResponse.length() > 500 ? aiResponse.substring(0, 500) + "..." : aiResponse);

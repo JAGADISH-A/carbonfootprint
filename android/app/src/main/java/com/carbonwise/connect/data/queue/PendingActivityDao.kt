@@ -14,6 +14,12 @@ interface PendingActivityDao {
     @Query("SELECT COUNT(*) FROM pending_activities WHERE syncStatus = 'PENDING'")
     fun getPendingCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM pending_activities WHERE syncStatus = 'PENDING'")
+    suspend fun countPending(): Int
+
+    @Query("SELECT * FROM pending_activities WHERE syncStatus = 'PENDING'")
+    suspend fun getPendingActivities(): List<PendingActivityEntity>
+
     @Query("SELECT COUNT(*) FROM pending_activities WHERE syncStatus = 'PENDING' AND source = :source")
     fun getPendingCountBySource(source: String): Flow<Int>
 

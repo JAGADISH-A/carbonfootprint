@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Zap, ArrowRight } from 'lucide-react'
 import { uploadReceipt, getCarbonAnalytics } from '@/api/services'
+import { useDashboard } from '@/api/DashboardContext'
 import type { TopEmissionActivity } from '@/types/activity'
 import {
   ProcessingTimeline,
@@ -29,6 +30,7 @@ const processingMessages: Record<WorkflowStage, string> = {
 
 export default function UploadPage() {
   const navigate = useNavigate()
+  const { refreshAll } = useDashboard()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [dragActive, setDragActive] = useState(false)
@@ -159,6 +161,8 @@ export default function UploadPage() {
 
       setPhase('success')
       setCurrentStage('success')
+      // Refresh all dashboard data so other pages reflect the new activity
+      await refreshAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setPhase('error')

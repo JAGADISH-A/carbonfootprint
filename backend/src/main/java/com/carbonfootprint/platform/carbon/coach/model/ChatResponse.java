@@ -18,4 +18,6 @@ public class ChatResponse {
     private String reply;
 
     private List<ChatCard> cards;
+
+    private List<String> suggestedQuestions;
 }

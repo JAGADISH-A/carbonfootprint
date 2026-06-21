@@ -53,6 +53,8 @@ public class MobileSyncService {
     private final ActivityRepository activityRepository;
     private final PendingActivityRepository pendingActivityRepository;
     private final BatchEnrichmentService batchEnrichmentService;
+    private final com.carbonfootprint.platform.mobile.repository.DeviceRepository deviceRepository;
+
 
     /**
      * Processes a batch of enriched transactions from the Android Companion App.
@@ -127,6 +129,14 @@ public class MobileSyncService {
         log.info("MobileSyncService — sync complete: syncId={} received={} processed={} duplicates={} failed={} durationMs={}",
                 syncId, received, processedCount, duplicateCount, failedCount, processingMs);
 
+        final int finalFailedCount = failedCount;
+        deviceRepository.findByDeviceId(deviceId).ifPresent(device -> {
+            device.setLastSeenAt(Instant.now());
+            device.setLastSyncAt(Instant.now());
+            device.setLastUploadStatus(finalFailedCount > 0 ? "FAILED" : "SUCCESS");
+            deviceRepository.save(device);
+        });
+
         return MobileSyncResponse.builder()
                 .syncId(syncId)
                 .processedCount(processedCount)
@@ -182,6 +192,14 @@ public class MobileSyncService {
                 .syncSessionId(request.getSyncSessionId())
                 .results(responses)
                 .build();
+
+        long failedCount = responses.stream().filter(r -> "FAILED".equals(r.getStatus())).count();
+        deviceRepository.findByDeviceId(request.getDeviceId()).ifPresent(device -> {
+            device.setLastSeenAt(Instant.now());
+            device.setLastSyncAt(Instant.now());
+            device.setLastUploadStatus(failedCount > 0 ? "FAILED" : "SUCCESS");
+            deviceRepository.save(device);
+        });
 
         log.info("[MOBILE_SYNC_PIPELINE] MobileSyncService - triggering async enrichment for {} saved items", savedPendingActivityIds.size());
         for (String id : savedPendingActivityIds) {

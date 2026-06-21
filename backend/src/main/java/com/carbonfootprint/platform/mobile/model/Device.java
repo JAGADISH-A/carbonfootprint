@@ -26,4 +26,9 @@ public class Device {
     
     private Instant createdAt;
     private Instant lastSeenAt;
+    
+    private Instant lastSyncAt;
+    private String lastUploadStatus;
+    private Integer pendingUploadCount;
 }
+

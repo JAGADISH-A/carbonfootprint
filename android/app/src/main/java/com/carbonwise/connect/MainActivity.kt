@@ -28,13 +28,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         enableEdgeToEdge()
-
-        val defaultSmsApp = android.provider.Telephony.Sms.getDefaultSmsPackage(this)
-        val isDefault = defaultSmsApp == packageName
-        android.util.Log.d("SMSDiagnostic", "Default SMS App: $defaultSmsApp")
-        android.util.Log.d("SMSDiagnostic", "Is this app default? $isDefault")
-        android.util.Log.d("SMSDiagnostic", "API Level: ${android.os.Build.VERSION.SDK_INT}")
 
         setContent {
             CarbonWiseTheme {

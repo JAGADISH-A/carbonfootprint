@@ -184,6 +184,7 @@ public class CarbonAnalyticsService implements CarbonAnalyticsUseCase {
                         .carbonKg(extractCarbonKg(activity))
                         .methodology(extractMethodology(activity))
                         .occurredAt(activity.getOccurredAt())
+                        .confidence(extractConfidence(activity))
                         .build())
                 .toList();
     }
@@ -249,4 +250,33 @@ public class CarbonAnalyticsService implements CarbonAnalyticsUseCase {
         Object methodology = assessment.get(METHODOLOGY_KEY);
         return methodology instanceof String ? (String) methodology : null;
     }
+
+    @SuppressWarnings("unchecked")
+    private Double extractConfidence(Activity activity) {
+        Map<String, Object> metadata = activity.getMetadata();
+        if (metadata == null) return null;
+
+        // Try carbonHints first
+        Object hintsObj = metadata.get("carbonHints");
+        if (hintsObj instanceof Map) {
+            Map<String, Object> hints = (Map<String, Object>) hintsObj;
+            Object confidenceObj = hints.get("confidence");
+            if (confidenceObj instanceof Number) {
+                return ((Number) confidenceObj).doubleValue();
+            }
+        }
+
+        // Fallback to carbonAssessment confidence if present
+        Object assessmentObj = metadata.get("carbonAssessment");
+        if (assessmentObj instanceof Map) {
+            Map<String, Object> assessment = (Map<String, Object>) assessmentObj;
+            Object confidenceObj = assessment.get("confidence");
+            if (confidenceObj instanceof Number) {
+                return ((Number) confidenceObj).doubleValue();
+            }
+        }
+
+        return null;
+    }
 }
+

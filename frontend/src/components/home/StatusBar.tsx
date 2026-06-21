@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform, type MotionValue, useMotionValueEvent } from 'framer-motion'
 import { TrendingDown, TrendingUp, Minus, Leaf } from 'lucide-react'
-import { getCarbonAnalytics } from '@/api/services'
 import type { CarbonAnalyticsResponse } from '@/types/activity'
 
 function MotionValueText({ motionValue, className }: { motionValue: MotionValue<string>; className?: string }) {
@@ -34,15 +33,12 @@ function getTrendInfo(data: CarbonAnalyticsResponse) {
   return { change, isUp: change > 0, isFlat: Math.abs(change) < 5 }
 }
 
-export default function StatusBar() {
-  const [data, setData] = useState<CarbonAnalyticsResponse | null>(null)
+interface StatusBarProps {
+  data: CarbonAnalyticsResponse | null
+  loading: boolean
+}
 
-  useEffect(() => {
-    getCarbonAnalytics()
-      .then((res) => { if (res.success && res.data) setData(res.data) })
-      .catch(() => {})
-  }, [])
-
+export default function StatusBar({ data, loading }: StatusBarProps) {
   const totalKg = Number(data?.totalCarbonKg ?? 0)
   const avgDaily = Number(data?.averageDailyKg ?? 0)
   const activityCount = data?.activityCount ?? 0
@@ -51,6 +47,25 @@ export default function StatusBar() {
   const countDaily = useCountUp(avgDaily, 0.3)
 
   const trend = data ? getTrendInfo(data) : null
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl bg-cream-50/40 border border-border-light p-5 animate-pulse">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="h-8 bg-gray-200 rounded w-1/2" />
+            <div className="h-3 bg-gray-200 rounded w-1/4" />
+          </div>
+          <div className="space-y-2 text-right">
+            <div className="h-3 bg-gray-200 rounded w-16 ml-auto" />
+            <div className="h-6 bg-gray-200 rounded w-12 ml-auto" />
+            <div className="h-4 bg-gray-200 rounded w-20 ml-auto" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!data || activityCount === 0) {
     return (

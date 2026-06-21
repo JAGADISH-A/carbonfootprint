@@ -93,6 +93,6 @@ public class CarbonInsightController {
      */
     private String getCurrentUserId() {
         // TODO: Extract from SecurityContext after Google Auth integration
-        return "anonymous";
+        return com.carbonfootprint.platform.shared.constant.DemoUser.ID;
     }
 }

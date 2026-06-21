@@ -13,7 +13,6 @@ class NotificationNormalizer @Inject constructor(
 ) {
     fun normalize(notification: RawNotification): PendingActivity {
         try {
-            Log.d("NotificationPipeline", "Stage 5: Merchant extraction")
             val merchant = filter.getMerchant(notification)
             
             // Deterministic hash: packageName + title + text + timestamp

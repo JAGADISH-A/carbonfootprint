@@ -15,6 +15,7 @@ class SmsCollector @Inject constructor(
 ) {
     companion object {
         private const val TAG = "SMSPipeline"
+        const val INITIAL_SYNC_WINDOW_DAYS = 14
     }
 
     suspend fun collectSms(sinceTimestamp: Long = 0L): List<RawSms> = withContext(Dispatchers.IO) {
@@ -22,10 +23,26 @@ class SmsCollector @Inject constructor(
         val uri = Uri.parse("content://sms/inbox")
         val projection = arrayOf("_id", "thread_id", "address", "body", "date")
         
-        // We only want SMS received after sinceTimestamp
-        val selection = if (sinceTimestamp > 0) "date > ?" else null
-        val selectionArgs = if (sinceTimestamp > 0) arrayOf(sinceTimestamp.toString()) else null
+        val now = System.currentTimeMillis()
+        val lookbackMs = INITIAL_SYNC_WINDOW_DAYS * 24 * 60 * 60 * 1000L
+        val cutoffTime = now - lookbackMs
+
+        val selection: String?
+        val selectionArgs: Array<String>?
+
+        if (sinceTimestamp > 0L) {
+            selection = "date > ?"
+            selectionArgs = arrayOf(sinceTimestamp.toString())
+        } else {
+            android.util.Log.d("MOBILE_SYNC", "Initial Sync Window")
+            android.util.Log.d("MOBILE_SYNC", "${INITIAL_SYNC_WINDOW_DAYS} days")
+            selection = "date >= ?"
+            selectionArgs = arrayOf(cutoffTime.toString())
+        }
         val sortOrder = "date DESC"
+
+        val totalInboxCount = getTotalInboxCount()
+        android.util.Log.d("MOBILE_SYNC", "Total SMS in inbox: $totalInboxCount")
 
         // ── Stage 1: Enter SmsCollector.collect() ──
         Log.d(TAG, "═══════════════════════════════════════════════")
@@ -135,6 +152,7 @@ class SmsCollector @Inject constructor(
                 }
                 Log.d(TAG, "Stage 3: Cursor iteration complete. Rows iterated=$rowNum, Valid SMS added=${result.size}")
             }
+            android.util.Log.d("MOBILE_SYNC", "Within ${if (sinceTimestamp > 0L) "sync" else "${INITIAL_SYNC_WINDOW_DAYS}-day"} window: ${result.size}")
         } catch (e: SecurityException) {
             Log.e(TAG, "Stage 2: SecurityException! SMS permission likely not granted", e)
         } catch (e: Exception) {
@@ -144,6 +162,17 @@ class SmsCollector @Inject constructor(
         }
 
         return@withContext result
+    }
+
+    fun getTotalInboxCount(): Int {
+        val uri = Uri.parse("content://sms/inbox")
+        return try {
+            context.contentResolver.query(uri, arrayOf("COUNT(*)"), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) else 0
+            } ?: 0
+        } catch (e: Exception) {
+            0
+        }
     }
 }
 

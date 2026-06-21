@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { generatePairingCode } from '@/api/services'
 import { PairingCodeResponse } from '@/types/device'
 
@@ -31,7 +31,7 @@ export default function ConnectDeviceModal({ isOpen, onClose, onSuccess }: Conne
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [step, pairingData, timeLeft])
+  }, [step, pairingData])
 
   const handleGenerateCode = async () => {
     setIsLoading(true)

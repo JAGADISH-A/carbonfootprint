@@ -8,6 +8,8 @@ class NotificationFilter @Inject constructor() {
 
     // Hardcoded rules for now, to be moved to configuration later
     private val allowedPackages = listOf(
+        // Testing / Debugging
+        "com.android.shell", "com.android.systemui",
         // Shopping
         "com.amazon.mShop.android.shopping", "com.flipkart.android", "com.myntra.android", 
         "com.grofers.customerapp", "com.bigbasket.mobileapp",
@@ -35,15 +37,8 @@ class NotificationFilter @Inject constructor() {
     )
 
     fun isUseful(notification: RawNotification): Boolean {
-        val logPrefix = "Package: ${notification.packageName}\n" +
-            "AppName: ${notification.appName}\n" +
-            "Title: ${notification.title}\n" +
-            "Text: ${notification.text}\n" +
-            "Reason: "
-
         // Stage 1: Package-based matching
         if (notification.packageName in ignoredPackages) {
-            android.util.Log.d("NotificationPipeline", logPrefix + "package explicitly ignored in ignoredPackages whitelist")
             return false
         }
         
@@ -51,7 +46,6 @@ class NotificationFilter @Inject constructor() {
         val isAllowedPackage = allowedPackages.any { notification.packageName.contains(it, ignoreCase = true) }
         
         if (!isAllowedPackage) {
-            android.util.Log.d("NotificationPipeline", logPrefix + "package not in allowed packages whitelist")
             return false
         }
         
@@ -60,17 +54,14 @@ class NotificationFilter @Inject constructor() {
         
         // Ignore specific patterns (e.g., OTP)
         if (ignoredKeywords.any { content.contains(it) }) {
-            android.util.Log.d("NotificationPipeline", logPrefix + "content contains ignored OTP/system keywords")
             return false
         }
         
         // Accept if it contains transactional keywords
         val hasTransactionKeyword = transactionKeywords.any { content.contains(it) }
         if (hasTransactionKeyword) {
-            android.util.Log.d("NotificationPipeline", logPrefix + "accepted")
             return true
         } else {
-            android.util.Log.d("NotificationPipeline", logPrefix + "content missing required transaction keywords")
             return false
         }
     }

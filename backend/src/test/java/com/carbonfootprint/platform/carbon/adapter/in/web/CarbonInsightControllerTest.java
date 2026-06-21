@@ -37,6 +37,9 @@ class CarbonInsightControllerTest {
     @MockBean
     private CarbonInsightUseCase carbonInsightUseCase;
 
+    @MockBean
+    private com.carbonfootprint.platform.mobile.service.DeviceTokenService deviceTokenService;
+
     @Autowired
     private ObjectMapper objectMapper;
 

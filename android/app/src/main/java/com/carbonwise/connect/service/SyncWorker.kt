@@ -33,14 +33,6 @@ class SyncWorker @AssistedInject constructor(
     private val pendingActivityRepository: com.carbonwise.connect.data.queue.PendingActivityRepository
 ) : CoroutineWorker(context, params) {
 
-    init {
-        try {
-            android.util.Log.d("SYNC_DEBUG", "Stage 1: Worker instantiated")
-        } catch (e: Exception) {
-            android.util.Log.e("SYNC_DEBUG", "Stage 1 failed", e)
-        }
-    }
-
     companion object {
         private const val CHANNEL_ID = "carbonwise_sync"
         private const val WORK_NAME = "carbonwise_periodic_sync"
@@ -58,7 +50,7 @@ class SyncWorker @AssistedInject constructor(
                 .setConstraints(constraints)
                 .setBackoffCriteria(
                     BackoffPolicy.EXPONENTIAL,
-                    15, TimeUnit.MINUTES // Retry 1 -> 15m, Retry 2 -> 30m, etc.
+                    15, TimeUnit.MINUTES
                 )
                 .build()
 
@@ -71,7 +63,6 @@ class SyncWorker @AssistedInject constructor(
         }
 
         fun syncNow(context: Context) {
-            android.util.Log.d("ManualSync", "SyncWorker.syncNow() called")
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -80,8 +71,6 @@ class SyncWorker @AssistedInject constructor(
                 .setConstraints(constraints)
                 .build()
 
-            android.util.Log.d("ManualSync", "WorkRequest ID: ${request.id}")
-            
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     "carbonwise_manual_sync",
@@ -96,90 +85,43 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        android.util.Log.e("SYNC_TRACE", "1 entered doWork")
         try {
-            android.util.Log.e("SYNC_TRACE", "2 before generating syncSessionId")
-            val syncSessionId = try {
-                val uuid = UUID.randomUUID().toString()
-                android.util.Log.e("SYNC_TRACE", "3 syncSessionId generated: $uuid")
-                uuid
-            } catch (e: Exception) {
-                android.util.Log.e("SYNC_TRACE", "EXCEPTION during UUID.randomUUID()", e)
-                throw e
-            }
+            val syncSessionId = UUID.randomUUID().toString()
 
-            android.util.Log.e("SYNC_TRACE", "4 before reading lastSmsScanTimestamp from settingsStore")
-            val lastSmsScan = try {
-                val ts = settingsStore.lastSmsScanTimestamp.first()
-                android.util.Log.e("SYNC_TRACE", "5 lastSmsScanTimestamp fetched: $ts")
-                ts
-            } catch (e: Exception) {
-                android.util.Log.e("SYNC_TRACE", "EXCEPTION during lastSmsScanTimestamp.first()", e)
-                throw e
-            }
+            val lastSuccessfulUpload = settingsStore.lastSuccessfulUploadTimestamp.first()
 
-            android.util.Log.e("SYNC_TRACE", "6 before SmsIngestionPipeline.runPipeline")
-            val smsResult = try {
-                val result = smsIngestionPipeline.runPipeline(lastSmsScan)
-                android.util.Log.e("SYNC_TRACE", "7 SmsIngestionPipeline.runPipeline finished. Found: ${result.found}, Relevant: ${result.relevant}")
-                result
-            } catch (e: Exception) {
-                android.util.Log.e("SYNC_TRACE", "EXCEPTION during runPipeline()", e)
-                throw e
-            }
-
-
+            val smsResult = smsIngestionPipeline.runPipeline(lastSuccessfulUpload)
 
             val notifFound = 0
             val notifRelevant = 0
 
-            android.util.Log.e("SYNC_TRACE", "10 before fetching pendingQueueCount")
-            val pendingQueueCount = try {
-                val count = pendingActivityRepository.getPendingCount().first()
-                android.util.Log.e("SYNC_TRACE", "11 pendingQueueCount fetched: $count")
-                count
-            } catch (e: Exception) {
-                android.util.Log.e("SYNC_TRACE", "EXCEPTION during getPendingCount().first()", e)
-                throw e
-            }
+            val pendingQueueCount = pendingActivityRepository.countPending()
 
             var uploadSuccess = 0
             var uploadFailed = 0
 
-            android.util.Log.e("SYNC_TRACE", "12 before checking pendingQueueCount > 0 ($pendingQueueCount)")
             if (pendingQueueCount > 0) {
-                android.util.Log.e("SYNC_TRACE", "13 before uploadRepository.syncBatch()")
                 try {
                     val syncResult = uploadRepository.syncBatch(syncSessionId)
-                    android.util.Log.e("SYNC_TRACE", "14 after uploadRepository.syncBatch() returned: $syncResult")
                     when (syncResult) {
                         is ApiResult.Success -> {
-                            android.util.Log.e("SYNC_TRACE", "15 syncResult is Success")
                             uploadSuccess = syncResult.data?.successCount ?: 0
                             uploadFailed = syncResult.data?.failedCount ?: 0
+                            android.util.Log.d("MOBILE_SYNC", "Uploading: $uploadSuccess")
                         }
                         is ApiResult.Error -> {
-                            android.util.Log.e("SYNC_TRACE", "16 syncResult is Error: ${syncResult.message}")
                             uploadFailed = pendingQueueCount
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("SYNC_TRACE", "EXCEPTION during syncBatch()", e)
+                    android.util.Log.e("SYNC_DEBUG", "syncBatch failed", e)
                     throw e
                 }
             } else {
-                android.util.Log.e("SYNC_TRACE", "17 pendingQueueCount is 0, skipping uploadRepository.syncBatch()")
+                android.util.Log.d("MOBILE_SYNC", "Uploading: 0")
             }
 
-            android.util.Log.e("SYNC_TRACE", "18 before fetching remainingQueueCount")
-            val remainingQueueCount = try {
-                val count = pendingActivityRepository.getPendingCount().first()
-                android.util.Log.e("SYNC_TRACE", "19 remainingQueueCount fetched: $count")
-                count
-            } catch (e: Exception) {
-                android.util.Log.e("SYNC_TRACE", "EXCEPTION during remainingQueueCount.first()", e)
-                throw e
-            }
+            val remainingQueueCount = pendingActivityRepository.countPending()
 
             val logMessage = """
                 ========== Sync Cycle ==========
@@ -203,17 +145,13 @@ class SyncWorker @AssistedInject constructor(
             
             android.util.Log.i("SyncWorker", "\n$logMessage")
 
-            android.util.Log.e("SYNC_TRACE", "20 before checking uploadFailed > 0 ($uploadFailed)")
             if (uploadFailed > 0) {
-                android.util.Log.e("SYNC_TRACE", "21 returning Result.retry()")
                 return Result.retry()
             } else {
-                android.util.Log.e("SYNC_TRACE", "22 returning Result.success()")
                 return Result.success()
             }
         } catch (exception: Exception) {
-            android.util.Log.e("SYNC_TRACE", "23 caught exception in outer block of doWork()", exception)
-            android.util.Log.e("SYNC_TRACE", "24 returning Result.retry()")
+            android.util.Log.e("SYNC_DEBUG", "Stage 1 failed", exception)
             return Result.retry()
         }
     }

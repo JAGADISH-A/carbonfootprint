@@ -55,22 +55,10 @@ export default function CoachChat({ enabled }: CoachChatProps) {
       abortRef.current = controller
 
       try {
-        console.log('[Chat] Sending request:', {
-          messageCount: msgs.length,
-          roles: msgs.map((m) => m.role),
-        })
-
         const response = await sendChatMessage(
           { messages: msgs },
           controller.signal
         )
-
-        console.log('[Chat] Response received:', {
-          success: response.success,
-          hasData: !!response.data,
-          replyLength: response.data?.reply?.length ?? 0,
-          cardCount: response.data?.cards?.length ?? 0,
-        })
 
         if (response.success && response.data) {
           const reply = response.data.reply || "I couldn't generate a response."
@@ -86,7 +74,6 @@ export default function CoachChat({ enabled }: CoachChatProps) {
         } else {
           // Backend returned 200 but success=false — show backend message
           const errorMsg = response.message || 'Something went wrong. Please try again.'
-          console.warn('[Chat] Backend returned success=false:', response)
           setMessages((prev) => [
             ...prev,
             {
@@ -112,7 +99,6 @@ export default function CoachChat({ enabled }: CoachChatProps) {
           }
         }
 
-        console.error('[Chat] Error:', err)
         setMessages((prev) => [
           ...prev,
           {
@@ -141,7 +127,13 @@ export default function CoachChat({ enabled }: CoachChatProps) {
 
   const handleRegenerate = async () => {
     if (loading) return
-    const lastUserIdx = messages.findLastIndex((m) => m.role === 'user')
+    let lastUserIdx = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIdx = i
+        break
+      }
+    }
     if (lastUserIdx === -1) return
     const msgsUpToLastUser = messages.slice(0, lastUserIdx + 1)
     setMessages(msgsUpToLastUser)

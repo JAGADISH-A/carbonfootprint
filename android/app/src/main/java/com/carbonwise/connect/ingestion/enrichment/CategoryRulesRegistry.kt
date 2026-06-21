@@ -54,11 +54,12 @@ class CategoryRulesRegistry {
      */
     fun resolve(candidate: TransactionCandidate, merchantTypeResult: MerchantTypeResult): CategoryResult {
         val rawText = candidate.rawNotification.lowercase()
+        val merchantText = candidate.merchant?.lowercase() ?: ""
         val packageName = candidate.sourceApp?.lowercase() ?: ""
 
         // Priority 1: Explicit notification keywords
         for (rule in explicitKeywords) {
-            if (rawText.contains(rule.pattern)) {
+            if (rawText.contains(rule.pattern) || merchantText.contains(rule.pattern)) {
                 return CategoryResult(
                     category = rule.category,
                     confidence = 0.95,
@@ -70,7 +71,7 @@ class CategoryRulesRegistry {
 
         // Priority 2: Merchant aliases
         for (rule in merchantAliases) {
-            if (rawText.contains(rule.pattern)) {
+            if (rawText.contains(rule.pattern) || merchantText.contains(rule.pattern)) {
                 return CategoryResult(
                     category = rule.category,
                     confidence = 0.94,

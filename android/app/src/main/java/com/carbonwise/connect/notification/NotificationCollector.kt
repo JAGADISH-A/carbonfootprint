@@ -26,22 +26,18 @@ class NotificationCollector : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("PermissionDebug", "NotificationCollector created")
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d("PermissionDebug", "NotificationCollector onListenerConnected()")
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        Log.d("PermissionDebug", "NotificationCollector onListenerDisconnected()")
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
-            Log.d("NotificationPipeline", "Stage 1: Enter onNotificationPosted()")
             super.onNotificationPosted(sbn)
             sbn?.let {
                 val notification = it.notification ?: return
@@ -66,7 +62,6 @@ class NotificationCollector : NotificationListenerService() {
                     notificationId = it.id,
                     isOngoing = notification.flags and Notification.FLAG_ONGOING_EVENT != 0
                 )
-                Log.d("NotificationPipeline", "Stage 2: RawNotification created")
 
                 scope.launch {
                     pipeline.processNotification(rawNotification)
@@ -79,7 +74,6 @@ class NotificationCollector : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
-        Log.d("PermissionDebug", "NotificationCollector onNotificationRemoved()")
         // Ignored for now as per requirements
     }
 

@@ -19,12 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.CARBON_PATH)
-@Profile("!stub")
 @RequiredArgsConstructor
 @Tag(name = "Carbon Chat", description = "Interactive AI chat about carbon emissions")
 public class CarbonChatController {
 
-    private final CarbonChatService carbonChatService;
+    private final com.carbonfootprint.platform.carbon.port.in.CarbonChatUseCase carbonChatService;
 
     @PostMapping("/chat")
     @Operation(summary = "Send a chat message and receive an AI response")
@@ -42,14 +41,12 @@ public class CarbonChatController {
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
             log.error("Chat endpoint error: userId={} error={}", userId, e.getMessage(), e);
-            ChatResponse fallback = ChatResponse.builder()
-                    .reply("I'm experiencing a temporary issue. Please try again in a moment.")
-                    .build();
-            return ResponseEntity.ok(ApiResponse.success(fallback));
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("500", "Chat service temporarily unavailable. Please try again."));
         }
     }
 
     private String getCurrentUserId() {
-        return "anonymous";
+        return com.carbonfootprint.platform.shared.constant.DemoUser.ID;
     }
 }

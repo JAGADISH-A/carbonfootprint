@@ -46,7 +46,7 @@ class CategoryEnricherTest {
         val mtResult = MerchantTypeResult("ECOMMERCE", 0.95, "PARTIAL_MATCH", "Amazon")
         val result = enricher.enrich(candidate, mtResult)
         assertThat(result.category).isEqualTo("GROCERY")
-        assertThat(result.matchedRule).isEqualTo("KEYWORD")
+        assertThat(result.matchedRule).isEqualTo("EXPLICIT_KEYWORD")
     }
 
     @Test

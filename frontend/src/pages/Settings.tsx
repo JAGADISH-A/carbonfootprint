@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import ConnectedDevices from '@/components/settings/ConnectedDevices'
 
 export default function Settings() {

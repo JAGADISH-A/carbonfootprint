@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, RefreshCw, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
+import { ArrowRight, RefreshCw, BarChart3 } from 'lucide-react'
 import { getAICoach, getCarbonAnalytics } from '@/api/services'
 import type { AICarbonCoachResponse, CarbonAnalyticsResponse } from '@/types/activity'
 import { CarbonSummaryPanel, CoachChat } from '@/components/coach'
@@ -13,6 +14,7 @@ function getGreeting(): string {
 }
 
 export default function Coach() {
+  const navigate = useNavigate()
   const [coach, setCoach] = useState<AICarbonCoachResponse | null>(null)
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +42,7 @@ export default function Coach() {
     return () => controller.abort()
   }, [fetchData])
 
-  const hasData = coach && (coach.summary || (coach.strengths.length > 0) || coach.actionPlan?.length)
+  const hasData = !!(coach && (coach.summary || (coach.strengths && coach.strengths.length > 0) || (coach.actionPlan && coach.actionPlan.length > 0)))
 
   if (!hasData && !loading) {
     return (
@@ -72,7 +74,7 @@ export default function Coach() {
         </p>
 
         <motion.button
-          onClick={() => (window.location.href = '/upload')}
+          onClick={() => navigate('/upload')}
           whileHover={{ scale: 1.03, y: -1 }}
           whileTap={{ scale: 0.97 }}
           className="btn-primary inline-flex items-center gap-2"
@@ -122,7 +124,7 @@ export default function Coach() {
           </button>
 
           <motion.button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="text-[10px] text-ink-muted hover:text-emerald-600 inline-flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-emerald-50"

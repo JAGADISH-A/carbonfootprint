@@ -1,16 +1,13 @@
 package com.carbonfootprint.platform.carbon.chat;
 
-import com.carbonfootprint.platform.carbon.analytics.model.CarbonAnalyticsResponse;
-import com.carbonfootprint.platform.carbon.analytics.model.CategoryEmissionSummary;
-import com.carbonfootprint.platform.carbon.analytics.model.TopEmissionActivity;
 import com.carbonfootprint.platform.carbon.coach.model.ChatCard;
 import com.carbonfootprint.platform.carbon.coach.model.ChatMessage;
 import com.carbonfootprint.platform.carbon.coach.model.ChatRequest;
 import com.carbonfootprint.platform.carbon.coach.model.ChatResponse;
-import com.carbonfootprint.platform.carbon.port.in.CarbonInsightUseCase;
 import com.carbonfootprint.platform.integration.ai.groq.GroqClient;
 import com.carbonfootprint.platform.integration.ai.groq.GroqMessage;
 import com.carbonfootprint.platform.platform.exception.IngestionException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -18,72 +15,38 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 @Profile("!stub")
-public class CarbonChatService {
+public class CarbonChatService implements com.carbonfootprint.platform.carbon.port.in.CarbonChatUseCase {
 
-    private static final String SYSTEM_PROMPT = """
-            You are EcoBuddy, a friendly and knowledgeable sustainability coach.
-            You help users understand their carbon footprint based on their receipt data.
-
-            IMPORTANT: You MUST respond with valid JSON. Do NOT output any text outside the JSON.
-            The entire response must be a single JSON object containing the fields below.
-
-            The JSON object has two fields:
-            - "reply": A short conversational message (1-3 sentences max). Use markdown for emphasis.
-            - "cards": An array of analysis cards. Include cards ONLY when the user's question
-              calls for data analysis. For general chat (greetings, simple questions), use an empty array.
-
-            Each card has:
-            - "title": Short label (e.g. "Total Emissions", "Top Category", "Confidence")
-            - "value": The main number or short text (e.g. "45.2 kg CO₂e")
-            - "description": One sentence explaining the card
-            - "icon": One of: "carbon", "category", "opportunity", "trend", "confidence", "action"
-            - "color": One of: "emerald", "amber", "blue", "red", "purple"
-
-            Available card icons:
-            - "carbon": Total emissions summary
-            - "category": Highest emission category
-            - "opportunity": Best improvement area
-            - "trend": Trend or comparison
-            - "confidence": Data confidence level
-            - "action": Action plan item
-
-            CARD GUIDELINES:
-            - For "why is my footprint high" → include carbon + category + opportunity cards
-            - For "which purchase" → include category card + opportunity card
-            - For "reduce emissions" → include opportunity + action cards
-            - For "action plan" → include action card
-            - For "compare" → include trend card
-            - For greetings / simple questions → empty cards array
-
-            Rules:
-            - Reference the user's specific data (total kg, categories, merchants)
-            - Never invent numbers — use ONLY the provided context data
-            - Keep the reply short and warm
-            - Output ONLY valid JSON, no markdown fences, no extra text
-            """;
+    private static final Pattern SUGGESTED_QUESTIONS_PATTERN =
+            Pattern.compile("```suggested_questions\\s*\\n(\\[.*?])\\s*\\n```", Pattern.DOTALL);
 
     private final GroqClient groqClient;
-    private final CarbonInsightUseCase carbonInsightUseCase;
+    private final PersonalizedContextBuilder contextBuilder;
+    private final ConversationMemory conversationMemory;
+    private final CarbonChatPromptBuilder promptBuilder;
     private final String coachModel;
     private final ObjectMapper objectMapper;
 
     public CarbonChatService(
             GroqClient groqClient,
-            CarbonInsightUseCase carbonInsightUseCase,
+            PersonalizedContextBuilder contextBuilder,
+            ConversationMemory conversationMemory,
+            CarbonChatPromptBuilder promptBuilder,
             @Value("${carbon.groq.coach-model:llama-3.3-70b-versatile}") String coachModel,
             ObjectMapper objectMapper
     ) {
         this.groqClient = groqClient;
-        this.carbonInsightUseCase = carbonInsightUseCase;
+        this.contextBuilder = contextBuilder;
+        this.conversationMemory = conversationMemory;
+        this.promptBuilder = promptBuilder;
         this.coachModel = coachModel;
         this.objectMapper = objectMapper;
         log.info("CarbonChatService initialised — coachModel={}", coachModel);
@@ -95,27 +58,16 @@ public class CarbonChatService {
             return ChatResponse.builder().reply("Please send a message.").build();
         }
 
-        String contextBlock;
-        try {
-            contextBlock = buildAnalyticsContext(userId);
-        } catch (Exception e) {
-            log.warn("CarbonChatService — failed to build analytics context, proceeding without data: {}",
-                    e.getMessage());
-            contextBlock = "No carbon data available yet. The user hasn't uploaded any receipts.";
-        }
+        String currentQuestion = incomingMessages.get(incomingMessages.size() - 1).getContent();
 
-        List<GroqMessage> groqMessages = new ArrayList<>();
-        groqMessages.add(GroqMessage.system(SYSTEM_PROMPT + "\n\n" + contextBlock));
+        // Build personalized context from real analytics
+        String userContext = contextBuilder.buildContext(userId);
 
-        for (ChatMessage msg : incomingMessages) {
-            String role = msg.getRole() != null ? msg.getRole().toLowerCase() : "user";
-            if ("system".equals(role)) continue;
-            if ("assistant".equals(role)) {
-                groqMessages.add(GroqMessage.assistant(msg.getContent()));
-            } else {
-                groqMessages.add(GroqMessage.user(msg.getContent()));
-            }
-        }
+        // Retrieve conversation history
+        List<ConversationMemory.ChatMessage> history = conversationMemory.getHistory(userId);
+
+        // Build Groq messages
+        List<GroqMessage> groqMessages = promptBuilder.buildMessages(userContext, history, currentQuestion);
 
         try {
             log.info("CarbonChatService — sending chat request: model={} messageCount={}",
@@ -123,7 +75,14 @@ public class CarbonChatService {
             String rawResponse = groqClient.generateMessages(coachModel, groqMessages);
             log.info("CarbonChatService — received chat response: responseSize={}",
                     rawResponse != null ? rawResponse.length() : 0);
-            return parseStructuredResponse(rawResponse);
+
+            ChatResponse response = parseStructuredResponse(rawResponse);
+
+            // Save conversation to memory
+            conversationMemory.addMessage(userId, "user", currentQuestion);
+            conversationMemory.addMessage(userId, "assistant", response.getReply());
+
+            return response;
         } catch (IngestionException e) {
             log.warn("CarbonChatService — AI call failed (IngestionException): {}", e.getMessage());
             return ChatResponse.builder()
@@ -147,6 +106,13 @@ public class CarbonChatService {
             String cleaned = content.trim();
             if (cleaned.startsWith("```")) {
                 cleaned = cleaned.replaceAll("^```(?:json)?\\s*", "").replaceAll("```\\s*$", "");
+            }
+
+            // Extract suggested questions before parsing JSON
+            List<String> suggestedQuestions = extractSuggestedQuestions(cleaned);
+            // Remove the suggested_questions block from cleaned content before JSON parse
+            if (!suggestedQuestions.isEmpty()) {
+                cleaned = cleaned.replaceAll("```suggested_questions\\s*\\n\\[.*?]\\s*\\n```", "").trim();
             }
 
             JsonNode root = objectMapper.readTree(cleaned);
@@ -173,12 +139,26 @@ public class CarbonChatService {
             return ChatResponse.builder()
                     .reply(reply)
                     .cards(cards.isEmpty() ? null : cards)
+                    .suggestedQuestions(suggestedQuestions.isEmpty() ? null : suggestedQuestions)
                     .build();
 
         } catch (Exception e) {
             log.warn("Failed to parse structured AI response, falling back to raw text: {}", e.getMessage());
             return ChatResponse.builder().reply(content).build();
         }
+    }
+
+    private List<String> extractSuggestedQuestions(String content) {
+        try {
+            Matcher matcher = SUGGESTED_QUESTIONS_PATTERN.matcher(content);
+            if (matcher.find()) {
+                String json = matcher.group(1);
+                return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+            }
+        } catch (Exception e) {
+            log.debug("Failed to extract suggested questions: {}", e.getMessage());
+        }
+        return List.of();
     }
 
     private String getText(JsonNode node, String field) {
@@ -218,46 +198,5 @@ public class CarbonChatService {
             if (c == '"') return i;
         }
         return -1;
-    }
-
-    private String buildAnalyticsContext(String userId) {
-        return carbonInsightUseCase.generateInsights(userId)
-                .map(insight -> {
-                    CarbonAnalyticsResponse a = insight.getAnalytics();
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("\n--- USER CARBON DATA ---\n");
-                    sb.append("Total emissions: ").append(fmt(a.getTotalCarbonKg())).append(" kg CO₂e\n");
-                    sb.append("Activity count: ").append(a.getActivityCount()).append("\n");
-                    sb.append("Average daily: ").append(fmt(a.getAverageDailyKg())).append(" kg\n");
-
-                    if (a.getCategoryTotals() != null && !a.getCategoryTotals().isEmpty()) {
-                        sb.append("Categories:\n");
-                        for (CategoryEmissionSummary cat : a.getCategoryTotals()) {
-                            sb.append("  - ").append(cat.getCategory())
-                                    .append(": ").append(fmt(cat.getCarbonKg())).append(" kg (")
-                                    .append(fmtPct(cat.getPercentageOfTotal())).append("%)\n");
-                        }
-                    }
-
-                    if (a.getTopActivities() != null && !a.getTopActivities().isEmpty()) {
-                        sb.append("Top activities:\n");
-                        for (TopEmissionActivity act : a.getTopActivities().stream().limit(5).toList()) {
-                            sb.append("  - ").append(act.getMerchant() != null ? act.getMerchant() : act.getCategory())
-                                    .append(": ").append(fmt(act.getCarbonKg())).append(" kg\n");
-                        }
-                    }
-
-                    sb.append("--- END DATA ---\n");
-                    return sb.toString();
-                })
-                .orElse("No carbon data available yet. The user hasn't uploaded any receipts.");
-    }
-
-    private String fmt(BigDecimal val) {
-        return val == null ? "0" : val.setScale(1, RoundingMode.HALF_UP).toString();
-    }
-
-    private String fmtPct(BigDecimal val) {
-        return val == null ? "0" : val.setScale(0, RoundingMode.HALF_UP).toString();
     }
 }

@@ -113,7 +113,9 @@ export interface TopEmissionActivity {
   carbonKg: number
   description: string | null
   occurredAt: string
+  confidence?: number
 }
+
 
 export interface CarbonAnalyticsResponse {
   totalCarbonKg: number

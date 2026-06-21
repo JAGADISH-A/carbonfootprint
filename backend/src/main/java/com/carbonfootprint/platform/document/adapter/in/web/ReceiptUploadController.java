@@ -77,7 +77,7 @@ public class ReceiptUploadController {
 
         // TODO: Extract userId from authenticated SecurityContext after Google Authentication is integrated.
         // Using a clearly temporary placeholder for now.
-        String currentUserId = "anonymous";
+        String currentUserId = com.carbonfootprint.platform.shared.constant.DemoUser.ID;
 
         IngestionRequest request = IngestionRequest.builder()
                 .userId(currentUserId)

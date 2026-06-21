@@ -94,11 +94,12 @@ class CarbonHintRulesRegistry {
         categoryResult: CategoryResult
     ): CarbonHintResult {
         val rawText = candidate.rawNotification.lowercase()
+        val merchantText = candidate.merchant?.lowercase() ?: ""
         val packageName = candidate.sourceApp?.lowercase() ?: ""
 
         // Priority 1: Merchant Aliases
         for (rule in merchantAliases) {
-            if (rawText.contains(rule.pattern)) {
+            if (rawText.contains(rule.pattern) || merchantText.contains(rule.pattern)) {
                 return CarbonHintResult(
                     carbonHint = rule.hint,
                     transportMode = rule.transportMode,
@@ -114,7 +115,7 @@ class CarbonHintRulesRegistry {
 
         // Priority 2: Notification Keywords
         for (rule in notificationKeywords) {
-            if (rawText.contains(rule.pattern)) {
+            if (rawText.contains(rule.pattern) || merchantText.contains(rule.pattern)) {
                 return CarbonHintResult(
                     carbonHint = rule.hint,
                     transportMode = rule.transportMode,

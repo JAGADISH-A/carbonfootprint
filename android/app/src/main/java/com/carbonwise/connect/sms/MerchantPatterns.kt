@@ -2,25 +2,11 @@ package com.carbonwise.connect.sms
 
 object MerchantPatterns {
     val KNOWN_MERCHANTS = listOf(
-        "Amazon",
-        "Flipkart",
-        "Swiggy",
-        "Zomato",
-        "Blinkit",
-        "BigBasket",
-        "IRCTC",
-        "AIRTEL",
-        "Jio",
-        "HDFC",
-        "ICICI",
-        "SBI",
-        "Axis",
-        "IndianOil",
-        "HPCL",
-        "BPCL",
-        "Uber",
-        "Ola",
-        "Air India"
+        "Amazon", "Flipkart", "Myntra", "Ajio", "IKEA",
+        "Swiggy", "Zomato", "Blinkit", "BigBasket", "Dominos", "Pizza Hut", "McDonalds", "KFC",
+        "IRCTC", "AIRTEL", "Jio", "Uber", "Ola", "Rapido", "Indigo", "Air India", "SpiceJet", "Metro",
+        "HDFC", "ICICI", "SBI", "Axis", "Kotak", "Paytm", "PhonePe", "UPI", "GPay", "Google Pay",
+        "IndianOil", "HPCL", "BPCL", "electricity", "water bill", "gas bill"
     ).map { it.lowercase() }
 
     // Sometimes sender IDs are like "AD-HDFCBK" or "VK-SWIGGY"

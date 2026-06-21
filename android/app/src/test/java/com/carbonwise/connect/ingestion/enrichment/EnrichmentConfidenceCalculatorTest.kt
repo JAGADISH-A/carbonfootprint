@@ -23,8 +23,8 @@ class EnrichmentConfidenceCalculatorTest {
     fun `Low confidence scenario`() {
         val candidate = TestFixtures.createCandidate(merchant = "UnknownStore")
         val mtResult = MerchantTypeResult("UNKNOWN", 0.0, null, null)
-        val catResult = CategoryResult("UNKNOWN", 0.0, null, "Mapped")
-        val hintResult = CarbonHintResult("UNKNOWN", null, null, null, null, 0.0, null, "Mapped")
+        val catResult = CategoryResult("UNKNOWN", 0.0, "None", "Mapped")
+        val hintResult = CarbonHintResult("UNKNOWN", null, null, null, null, 0.0, "None", "Mapped")
         
         val result = calculator.calculate(candidate, mtResult, catResult, hintResult)
         assertThat(result.overallConfidence).isLessThan(0.30)
@@ -35,8 +35,8 @@ class EnrichmentConfidenceCalculatorTest {
     fun `Missing merchant raises warning`() {
         val candidate = TestFixtures.createCandidate(merchant = null)
         val mtResult = MerchantTypeResult("UNKNOWN", 0.0, null, null)
-        val catResult = CategoryResult("UNKNOWN", 0.0, null, "Mapped")
-        val hintResult = CarbonHintResult("UNKNOWN", null, null, null, null, 0.0, null, "Mapped")
+        val catResult = CategoryResult("UNKNOWN", 0.0, "None", "Mapped")
+        val hintResult = CarbonHintResult("UNKNOWN", null, null, null, null, 0.0, "None", "Mapped")
         
         val result = calculator.calculate(candidate, mtResult, catResult, hintResult)
         assertThat(result.warnings).contains("Unknown merchant")

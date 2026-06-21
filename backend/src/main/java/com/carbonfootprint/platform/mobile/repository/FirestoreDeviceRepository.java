@@ -164,6 +164,8 @@ public class FirestoreDeviceRepository implements DeviceRepository {
         map.put("refreshTokenExpiry", d.getRefreshTokenExpiry() != null ? d.getRefreshTokenExpiry().toString() : null);
         map.put("createdAt", d.getCreatedAt() != null ? d.getCreatedAt().toString() : null);
         map.put("lastSeenAt", d.getLastSeenAt() != null ? d.getLastSeenAt().toString() : null);
+        map.put("lastSyncAt", d.getLastSyncAt() != null ? d.getLastSyncAt().toString() : null);
+        map.put("lastUploadStatus", d.getLastUploadStatus());
         return map;
     }
 
@@ -184,8 +186,11 @@ public class FirestoreDeviceRepository implements DeviceRepository {
                 .refreshTokenExpiry(parseInstant((String) data.get("refreshTokenExpiry")))
                 .createdAt(parseInstant((String) data.get("createdAt")))
                 .lastSeenAt(parseInstant((String) data.get("lastSeenAt")))
+                .lastSyncAt(parseInstant((String) data.get("lastSyncAt")))
+                .lastUploadStatus((String) data.get("lastUploadStatus"))
                 .build();
     }
+
 
     private Instant parseInstant(String value) {
         if (value == null) return null;

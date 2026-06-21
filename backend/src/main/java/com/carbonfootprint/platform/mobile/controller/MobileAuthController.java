@@ -5,6 +5,8 @@ import com.carbonfootprint.platform.mobile.dto.PairingCodeResponse;
 import com.carbonfootprint.platform.mobile.dto.TokenRefreshRequest;
 import com.carbonfootprint.platform.mobile.dto.TokenResponse;
 import com.carbonfootprint.platform.mobile.service.PairingService;
+import com.carbonfootprint.platform.mobile.port.out.PendingActivityRepository;
+import com.carbonfootprint.platform.shared.constant.DemoUser;
 import com.carbonfootprint.platform.platform.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,12 +24,12 @@ import org.springframework.web.bind.annotation.*;
 public class MobileAuthController {
 
     private final PairingService pairingService;
+    private final PendingActivityRepository pendingActivityRepository;
 
     @PostMapping("/pairing/generate")
     @Operation(summary = "Generate a new pairing code (Called by Web App)")
     public ResponseEntity<ApiResponse<PairingCodeResponse>> generatePairingCode() {
-        // In Phase 4.4, we stub the web user ID since web auth is not fully wired yet
-        String webUserId = "web-user-123";
+        String webUserId = DemoUser.ID;
         
         PairingCodeResponse response = pairingService.generatePairingCode(webUserId);
         return ResponseEntity.ok(ApiResponse.success(response, "Pairing code generated"));
@@ -65,16 +67,29 @@ public class MobileAuthController {
     @GetMapping("/devices")
     @Operation(summary = "Get all devices for the authenticated user (Called by Web App)")
     public ResponseEntity<ApiResponse<java.util.List<com.carbonfootprint.platform.mobile.model.Device>>> getDevices() {
-        String webUserId = "web-user-123"; // TODO: use Spring Security
+        String webUserId = DemoUser.ID; // TODO: use Spring Security
         var devices = pairingService.getDevicesForUser(webUserId);
+        for (var device : devices) {
+            long count = pendingActivityRepository.countPendingByDeviceId(device.getDeviceId());
+            device.setPendingUploadCount((int) count);
+        }
         return ResponseEntity.ok(ApiResponse.success(devices, "Devices retrieved"));
     }
 
     @DeleteMapping("/devices/{deviceId}")
     @Operation(summary = "Remove a device for the authenticated user (Called by Web App)")
     public ResponseEntity<ApiResponse<Void>> removeDevice(@PathVariable String deviceId) {
-        String webUserId = "web-user-123"; // TODO: use Spring Security
+        String webUserId = DemoUser.ID; // TODO: use Spring Security
         pairingService.removeDeviceForUser(deviceId, webUserId);
         return ResponseEntity.ok(ApiResponse.success(null, "Device removed"));
     }
+
+    @PostMapping("/devices/{deviceId}/sync")
+    @Operation(summary = "Trigger device synchronization processing (Called by Web App)")
+    public ResponseEntity<ApiResponse<Void>> triggerSync(@PathVariable String deviceId) {
+        String webUserId = DemoUser.ID; // TODO: use Spring Security
+        pairingService.triggerDeviceSync(deviceId, webUserId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Synchronization triggered successfully"));
+    }
 }
+

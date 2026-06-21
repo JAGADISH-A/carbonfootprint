@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -13,7 +12,7 @@ import {
   ArrowRight,
   MessageCircle,
 } from 'lucide-react'
-import { getCarbonAnalytics } from '@/api/services'
+import { useDashboard } from '@/api/DashboardContext'
 import type { CarbonAnalyticsResponse, TopEmissionActivity } from '@/types/activity'
 
 const categoryConfig: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
@@ -58,19 +57,8 @@ function ActivitySkeleton() {
 
 export default function RecentActivity() {
   const navigate = useNavigate()
-  const [data, setData] = useState<CarbonAnalyticsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getCarbonAnalytics()
-      .then((res) => {
-        if (res.success && res.data) {
-          setData(res.data)
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+  const { analytics, loading } = useDashboard()
+  const data = analytics as CarbonAnalyticsResponse | null
 
   const activities = data?.topActivities ?? []
   const hasData = activities.length > 0
@@ -171,7 +159,15 @@ export default function RecentActivity() {
 
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm font-semibold text-ink">{Number(activity.carbonKg ?? 0).toFixed(1)} kg</p>
-                  <p className="text-[11px] text-ink-faint">{getTimeAgo(activity.occurredAt)}</p>
+                  <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                    {activity.confidence != null && (
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        activity.confidence >= 0.8 ? 'bg-emerald-500' :
+                        activity.confidence >= 0.5 ? 'bg-amber-500' : 'bg-gray-400'
+                      }`} title={activity.confidence >= 0.8 ? 'High confidence' : activity.confidence >= 0.5 ? 'Medium confidence' : 'Low confidence'} />
+                    )}
+                    <p className="text-[11px] text-ink-faint">{getTimeAgo(activity.occurredAt)}</p>
+                  </div>
                 </div>
               </motion.div>
             )

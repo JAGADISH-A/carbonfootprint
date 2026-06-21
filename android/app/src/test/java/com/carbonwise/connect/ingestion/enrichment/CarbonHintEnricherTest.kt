@@ -45,7 +45,7 @@ class CarbonHintEnricherTest {
         
         val result = enricher.enrich(candidate, mtResult, catResult)
         assertThat(result.carbonHint).isEqualTo("RIDE_SHARE")
-        assertThat(result.transportMode).isNull()
+        assertThat(result.transportMode).isEqualTo("CAR")
     }
 
     @Test
@@ -114,7 +114,7 @@ class CarbonHintEnricherTest {
     fun `Unknown maps to UNKNOWN`() {
         val candidate = TestFixtures.createCandidate()
         val mtResult = MerchantTypeResult("UNKNOWN", 0.0, null, null)
-        val catResult = CategoryResult("UNKNOWN", 0.0, null, "None")
+        val catResult = CategoryResult("UNKNOWN", 0.0, "None", "None")
         
         val result = enricher.enrich(candidate, mtResult, catResult)
         assertThat(result.carbonHint).isEqualTo("UNKNOWN")

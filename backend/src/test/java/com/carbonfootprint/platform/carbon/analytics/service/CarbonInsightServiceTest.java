@@ -85,8 +85,8 @@ class CarbonInsightServiceTest {
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
         assertThat(response.getSummary()).contains("1 activity");
-        assertThat(response.getSummary()).contains("10.00 kg CO₂e");
-        assertThat(response.getSummary()).contains("FUEL");
+        assertThat(response.getSummary()).contains("10.0 kg CO₂e");
+        assertThat(response.getSummary()).contains("Fuel");
     }
 
     @Test
@@ -98,8 +98,9 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getSummary()).contains("5 activity/activities");
-        assertThat(response.getSummary()).contains("average 10.00 kg per activity");
+        assertThat(response.getSummary()).contains("5 activities");
+        assertThat(response.getSummary()).contains("average");
+        assertThat(response.getSummary()).contains("10.0 kg CO₂e");
     }
 
     // ── Achievements ──────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getAchievements()).anyMatch(s -> s.contains("below the 5 kg benchmark"));
+        assertThat(response.getAchievements()).anyMatch(s -> s.contains("under 5 kg"));
     }
 
     @Test
@@ -149,7 +150,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getAchievements()).anyMatch(s -> s.contains("declining"));
+        assertThat(response.getAchievements()).anyMatch(s -> s.contains("going down"));
     }
 
     @Test
@@ -162,7 +163,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getAchievements()).anyMatch(s -> s.contains("well-distributed"));
+        assertThat(response.getAchievements()).anyMatch(s -> s.contains("spread across different areas"));
     }
 
     // ── Warnings ──────────────────────────────────────────────────────────
@@ -176,7 +177,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getWarnings()).anyMatch(s -> s.contains("exceed the 100 kg threshold"));
+        assertThat(response.getWarnings()).anyMatch(s -> s.contains("above 100 kg"));
     }
 
     @Test
@@ -201,7 +202,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getWarnings()).anyMatch(s -> s.contains("increasing"));
+        assertThat(response.getWarnings()).anyMatch(s -> s.contains("creeping up"));
     }
 
     @Test
@@ -239,8 +240,8 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("electric or hybrid"));
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("public transport"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("combining errands"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("bus or metro ride"));
     }
 
     @Test
@@ -252,8 +253,8 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("renewable energy"));
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("energy-efficient"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("LED bulbs"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Unplugging devices"));
     }
 
     @Test
@@ -265,8 +266,8 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("train alternatives"));
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Offset flight"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("trains are often just as fast"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("economy class"));
     }
 
     @Test
@@ -278,7 +279,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("public transport, cycling"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Walking or cycling"));
     }
 
     @Test
@@ -290,7 +291,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("locally produced"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("local products"));
     }
 
     @Test
@@ -326,7 +327,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Review this category"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Take a look at this category"));
     }
 
     @Test
@@ -338,7 +339,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("consolidating activities"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("combining a few smaller errands"));
     }
 
     @Test
@@ -350,7 +351,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("Review your recent lifestyle"));
+        assertThat(response.getRecommendations()).anyMatch(s -> s.contains("what changed recently"));
     }
 
     // ── Insights ──────────────────────────────────────────────────────────
@@ -364,9 +365,9 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("60.00 kg CO₂e"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("60.0 kg CO₂e"));
         assertThat(response.getInsights()).anyMatch(s -> s.contains("6 activities"));
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("average 10.00 kg/activity"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("averaging 10.0 kg each"));
     }
 
     @Test
@@ -379,7 +380,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("Highest emission category: FUEL"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("biggest source is Fuel"));
     }
 
     @Test
@@ -392,7 +393,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("Lowest emission category: ELECTRICITY"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("lowest is Electricity"));
     }
 
     @Test
@@ -404,8 +405,8 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("Largest single activity: Shell"));
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("50.00 kg CO₂e"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("highest single activity is Shell"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("50.0 kg CO₂e"));
     }
 
     @Test
@@ -417,21 +418,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("Monthly trend"));
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("increased"));
-    }
-
-    @Test
-    void generateInsights_insightsContainCategoryCount() {
-        when(carbonAnalyticsUseCase.getAnalytics(USER_ID)).thenReturn(
-                Optional.of(analytics(10,
-                        cats(cat("FUEL", 50, 5, 50), cat("ELECTRICITY", 30, 3, 30), cat("TRANSPORT", 20, 2, 20)),
-                        trends(trend("2026-01", 100, 10)),
-                        List.of(top("act-001", "FUEL", "Shell", 50)))));
-
-        CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
-
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("3 distinct categories"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("went up by 133.3%"));
     }
 
     // ── Edge cases ────────────────────────────────────────────────────────
@@ -503,7 +490,7 @@ class CarbonInsightServiceTest {
     }
 
     @Test
-    void generateInsights_nullMerchant_usesActivityId() {
+    void generateInsights_nullMerchant_usesCategoryName() {
         when(carbonAnalyticsUseCase.getAnalytics(USER_ID)).thenReturn(
                 Optional.of(analytics(1, cats(cat("FUEL", 10, 1, 100)),
                         trends(trend("2026-01", 10, 1)),
@@ -511,7 +498,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID).orElseThrow();
 
-        assertThat(response.getInsights()).anyMatch(s -> s.contains("act-001"));
+        assertThat(response.getInsights()).anyMatch(s -> s.contains("Fuel"));
     }
 
     // ── Date range delegation ─────────────────────────────────────────────
@@ -528,7 +515,7 @@ class CarbonInsightServiceTest {
 
         CarbonInsightResponse response = service.generateInsights(USER_ID, from, to).orElseThrow();
 
-        assertThat(response.getSummary()).contains("3 activity/activities");
+        assertThat(response.getSummary()).contains("3 activities");
         verify(carbonAnalyticsUseCase).getAnalytics(USER_ID, from, to);
     }
 

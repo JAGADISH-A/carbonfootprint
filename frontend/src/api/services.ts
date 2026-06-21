@@ -8,6 +8,7 @@ import type {
   ChatRequest,
   ChatResponse,
 } from '@/types/activity'
+import type { CompanionRelease } from '@/types/device'
 
 export async function getCarbonAnalytics(params?: {
   from?: string
@@ -103,3 +104,23 @@ export async function removeDevice(
   )
   return response.data
 }
+
+export async function syncDevice(
+  deviceId: string
+): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<ApiResponse<void>>(
+    `/api/v1/mobile/devices/${deviceId}/sync`
+  )
+  return response.data
+}
+
+export async function getCompanionRelease(
+  signal?: AbortSignal
+): Promise<ApiResponse<CompanionRelease>> {
+  const response = await apiClient.get<ApiResponse<CompanionRelease>>(
+    '/api/v1/companion/release',
+    { signal }
+  )
+  return response.data
+}
+

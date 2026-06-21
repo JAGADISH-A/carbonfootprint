@@ -55,9 +55,11 @@ export default function Home() {
   const [insights, setInsights] = useState<CarbonInsightResponse | null>(null)
   const [coach, setCoach] = useState<AICarbonCoachResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
+    setError(false)
     try {
       const [aRes, iRes, cRes] = await Promise.all([
         getCarbonAnalytics(undefined, signal),
@@ -67,8 +69,9 @@ export default function Home() {
       if (aRes.success && aRes.data) setAnalytics(aRes.data)
       if (iRes.success && iRes.data) setInsights(iRes.data)
       if (cRes.success && cRes.data) setCoach(cRes.data)
-    } catch {
-      // silent
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -95,10 +98,23 @@ export default function Home() {
   return (
     <motion.div variants={stagger} initial="hidden" animate="show">
 
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-sm flex items-center justify-between text-red-800">
+          <span>Failed to load carbon dashboard data. Please try again.</span>
+          <button
+            onClick={() => fetchData()}
+            className="px-3 py-1 bg-red-100 hover:bg-red-200 font-semibold rounded-md transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* ── 1. HERO GREETING ────────────────────────────────────────── */}
       <motion.div variants={fadeUp} className="mb-4">
         <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">
-          {greeting}, Jagan <span className="inline-block ml-1">🌱</span>
+          {greeting} <span className="inline-block ml-1">🌱</span>
         </h1>
         <p className="text-sm text-ink-muted mt-1">
           {hasData
@@ -109,7 +125,7 @@ export default function Home() {
 
       {/* ── 2. TODAY'S CARBON (prominent) ───────────────────────────── */}
       <motion.div variants={fadeUp} className="mb-5">
-        <StatusBar />
+        <StatusBar data={analytics} loading={loading} />
       </motion.div>
 
       {/* ── 3. AI RECOMMENDATION (hero action) ──────────────────────── */}
@@ -191,7 +207,13 @@ export default function Home() {
             )}
           </div>
 
-          {!hasData ? (
+          {loading ? (
+            <div className="space-y-2 py-2 animate-pulse">
+              <div className="h-10 bg-gray-200 rounded w-full" />
+              <div className="h-10 bg-gray-200 rounded w-full" />
+              <div className="h-10 bg-gray-200 rounded w-full" />
+            </div>
+          ) : !hasData ? (
             <div className="text-center py-5">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-2">
                 <span className="text-lg">📄</span>
@@ -235,7 +257,14 @@ export default function Home() {
       </motion.div>
 
       {/* ── 6. SUPPORTING METRICS (compact row) ─────────────────────── */}
-      {hasData && (
+      {loading ? (
+        <div className="grid grid-cols-4 gap-2 mb-5 animate-pulse">
+          <div className="h-16 bg-gray-100 rounded-xl" />
+          <div className="h-16 bg-gray-100 rounded-xl" />
+          <div className="h-16 bg-gray-100 rounded-xl" />
+          <div className="h-16 bg-gray-100 rounded-xl" />
+        </div>
+      ) : hasData && (
         <motion.div variants={fadeUp} className="mb-5">
           <div className="grid grid-cols-4 gap-2">
             <div className="rounded-xl bg-cream-50/50 border border-border-light/50 p-2.5 text-center">
@@ -267,7 +296,9 @@ export default function Home() {
       )}
 
       {/* ── 7. COACH CTA ────────────────────────────────────────────── */}
-      {hasData && (
+      {loading ? (
+        <div className="h-16 bg-gray-100 rounded-xl animate-pulse mb-5" />
+      ) : hasData && (
         <motion.div variants={fadeUp}>
           <button
             onClick={() => navigate('/coach')}

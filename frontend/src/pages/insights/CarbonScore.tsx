@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion'
 
-export default function CarbonScore({ kg, max = 50 }: { kg: number; max?: number }) {
+interface CarbonScoreProps {
+  kg: number
+  max?: number
+  weeklyDifference?: number | null
+}
+
+export default function CarbonScore({ kg, max = 50, weeklyDifference }: CarbonScoreProps) {
   const radius = 70
   const circumference = 2 * Math.PI * radius
   const percentage = Math.min((kg / max) * 100, 100)
@@ -40,6 +46,26 @@ export default function CarbonScore({ kg, max = 50 }: { kg: number; max?: number
         >
           {label}
         </motion.span>
+        {weeklyDifference != null && weeklyDifference !== 0 && (
+          <motion.span
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3 }}
+            className={`text-[10px] font-semibold mt-1 ${weeklyDifference < 0 ? 'text-emerald-600' : 'text-red-500'}`}
+          >
+            {weeklyDifference < 0 ? '▼' : '▲'} {weeklyDifference < 0 ? '' : '+'}{weeklyDifference.toFixed(1)} this week
+          </motion.span>
+        )}
+        {weeklyDifference != null && weeklyDifference === 0 && (
+          <motion.span
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3 }}
+            className="text-[10px] font-medium text-ink-faint mt-1"
+          >
+            No change
+          </motion.span>
+        )}
       </div>
     </div>
   )

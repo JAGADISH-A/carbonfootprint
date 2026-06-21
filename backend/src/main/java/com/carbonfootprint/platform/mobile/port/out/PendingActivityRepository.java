@@ -18,4 +18,10 @@ public interface PendingActivityRepository {
     void updateFailure(String id, String errorMessage);
     
     PendingActivity upsert(PendingActivity pendingActivity);
+
+    long countPendingByDeviceId(String deviceId);
+
+    java.util.List<PendingActivity> findPendingByDeviceId(String deviceId);
 }
+
+

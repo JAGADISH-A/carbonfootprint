@@ -1,0 +1,18 @@
+# =============================================================================
+#  Production Profile Overrides
+#  Activated with: --spring.profiles.active=prod
+# =============================================================================
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.carbonfootprint: WARN
+    org.springframework: WARN
+    org.springframework.security: WARN
+
+springdoc:
+  enabled: false

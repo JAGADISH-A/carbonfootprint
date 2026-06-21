@@ -36,6 +36,9 @@ class AICarbonCoachControllerTest {
     @MockBean
     private AICarbonCoachUseCase aiCarbonCoachUseCase;
 
+    @MockBean
+    private com.carbonfootprint.platform.mobile.service.DeviceTokenService deviceTokenService;
+
     @Autowired
     private ObjectMapper objectMapper;
 

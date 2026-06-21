@@ -61,21 +61,16 @@ class CompanionStatusViewModel @Inject constructor(
 
         viewModelScope.launch {
             healthState.collect { state ->
-                android.util.Log.d("PermissionCheck", "ViewModel healthState collected: $state")
-                android.util.Log.d("UI", "Loaded raw lastSyncTime=${state.lastSyncTime}")
                 val displayTime = formatLastSyncTime(state.lastSyncTime)
-                android.util.Log.d("UI", "Displaying lastSyncTime=$displayTime")
                 _uiState.update { it.copy(lastSync = displayTime) }
             }
         }
     }
 
     fun refreshPermissions() {
-        android.util.Log.d("PermissionCheck", "Refresh started in ViewModel")
         companionHealthManager.refresh()
         val time = healthState.value.lastSyncTime
         val displayTime = formatLastSyncTime(time)
-        android.util.Log.d("UI", "Refreshing and displaying lastSyncTime=$displayTime")
         _uiState.update { it.copy(lastSync = displayTime) }
     }
 
@@ -111,13 +106,14 @@ class CompanionStatusViewModel @Inject constructor(
         viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
                 WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow("carbonwise_periodic_sync"),
-                WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow("carbonwise_manual_sync")
-            ) { periodicInfos, manualInfos ->
+                WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow("carbonwise_manual_sync"),
+                healthState
+            ) { periodicInfos, manualInfos, hState ->
                 val isManualRunning = manualInfos.any { it.state == WorkInfo.State.RUNNING }
                 val isPeriodicRunning = periodicInfos.any { it.state == WorkInfo.State.RUNNING }
                 val isManualEnqueued = manualInfos.any { it.state == WorkInfo.State.ENQUEUED }
 
-                if (isManualRunning || isPeriodicRunning) {
+                val status = if (isManualRunning || isPeriodicRunning) {
                     val info = manualInfos.firstOrNull { it.state == WorkInfo.State.RUNNING } 
                         ?: periodicInfos.first { it.state == WorkInfo.State.RUNNING }
                     if (info.runAttemptCount > 0) "Retrying" else "Syncing"
@@ -126,8 +122,16 @@ class CompanionStatusViewModel @Inject constructor(
                 } else {
                     "Connected"
                 }
-            }.collect { status ->
-                _uiState.update { it.copy(syncStatus = status, isSyncing = status == "Syncing" || status == "Retrying") }
+
+                val displayStatus = if (status == "Syncing" && hState.lastSyncTime == 0L) {
+                    "Scanning recent activity messages..."
+                } else {
+                    status
+                }
+
+                Pair(status, displayStatus)
+            }.collect { (status, displayStatus) ->
+                _uiState.update { it.copy(syncStatus = displayStatus, isSyncing = status == "Syncing" || status == "Retrying") }
             }
         }
     }
@@ -171,19 +175,10 @@ class CompanionStatusViewModel @Inject constructor(
     }
 
     fun triggerLocalSync() {
-        android.util.Log.d("ManualSync", "ViewModel.triggerLocalSync() called")
         _uiState.update { it.copy(syncResult = null) }
         viewModelScope.launch {
             try {
-                // Enqueue WorkManager sync instead of local
-                android.util.Log.d("ManualSync", "Enqueuing WorkManager request")
                 com.carbonwise.connect.service.SyncWorker.syncNow(context)
-                
-                // Immediately query WorkManager
-                val workInfos = WorkManager.getInstance(context).getWorkInfosForUniqueWork("carbonwise_manual_sync").get()
-                for (info in workInfos) {
-                    android.util.Log.d("SYNC_DEBUG", "WorkInfo: id=${info.id}, state=${info.state}, runAttemptCount=${info.runAttemptCount}, tags=${info.tags}")
-                }
                 
                 _uiState.update { 
                     it.copy(

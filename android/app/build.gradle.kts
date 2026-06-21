@@ -18,6 +18,10 @@ android {
         versionName = "1.0.0"
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildTypes {
         debug {
             buildConfigField("String", "BASE_URL", "\"http://127.0.0.1:8080/\"")
@@ -100,4 +104,13 @@ dependencies {
 
     // Security Crypto
     implementation("androidx.security:security-crypto-ktx:1.1.0-alpha06")
+
+    // Testing
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation("com.google.truth:truth:1.4.2")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

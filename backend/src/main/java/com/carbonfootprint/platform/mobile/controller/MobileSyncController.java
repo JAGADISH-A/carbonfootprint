@@ -32,6 +32,15 @@ import java.util.Map;
 public class MobileSyncController {
 
     private final MobileSyncService mobileSyncService;
+    private final com.carbonfootprint.platform.mobile.repository.DeviceRepository deviceRepository;
+    private final com.carbonfootprint.platform.mobile.port.out.PendingActivityRepository pendingActivityRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${carbon.companion.version:1.0.0}")
+    private String latestAppVersion;
+
+    @org.springframework.beans.factory.annotation.Value("${carbon.companion.download-url:}")
+    private String downloadUrl;
+
 
     @PostMapping("/sync")
     @Operation(
@@ -133,6 +142,11 @@ public class MobileSyncController {
 
         log.info("Received heartbeat from device: {}", request.getDeviceId());
 
+        deviceRepository.findByDeviceId(deviceId).ifPresent(device -> {
+            device.setLastSeenAt(Instant.now());
+            deviceRepository.save(device);
+        });
+
         HeartbeatResponse response = HeartbeatResponse.builder()
                 .deviceId(request.getDeviceId())
                 .serverTime(Instant.now())
@@ -152,7 +166,8 @@ public class MobileSyncController {
         log.info("Returning mobile configuration");
 
         MobileConfigResponse response = MobileConfigResponse.builder()
-                .latestAppVersion("1.0.0")
+                .latestAppVersion(latestAppVersion)
+                .downloadUrl(downloadUrl)
                 .forceUpdate(false)
                 .syncIntervalSeconds(3600)
                 .featureFlags(Map.of("enableSmsParsing", "true", "enableLocationTracking", "false"))
@@ -173,10 +188,11 @@ public class MobileSyncController {
 
         log.info("Checking sync status for device: {}", deviceId);
 
+        long pendingCount = pendingActivityRepository.countPendingByDeviceId(deviceId);
+
         SyncStatusResponse response = SyncStatusResponse.builder()
                 .deviceId(deviceId)
-                .lastSuccessfulSync(Instant.now().minusSeconds(86400))
-                .pendingTransactionsCount(0)
+                .pendingTransactionsCount((int) pendingCount)
                 .isSyncInProgress(false)
                 .build();
 

@@ -33,6 +33,13 @@ class SmsIngestionPipeline @Inject constructor(
         var relevant = 0
         var newActivitiesSaved = 0
         
+        val ignoredCounts = mutableMapOf<String, Int>(
+            "OTP/Security" to 0,
+            "Promotion" to 0,
+            "Shipping Noise" to 0,
+            "Noise" to 0
+        )
+
         // 1. Read SMS (Stages 1-3 are logged inside SmsCollector)
         val rawMessages = collector.collectSms(sinceTimestamp)
         found = rawMessages.size
@@ -47,8 +54,8 @@ class SmsIngestionPipeline @Inject constructor(
 
         for ((index, rawSms) in rawMessages.withIndex()) {
             // ── Stage 5: SmsFilter ──
-            val isAccepted = filter.isUseful(rawSms)
-            if (isAccepted) {
+            val rejectionReason = filter.getRejectionReason(rawSms)
+            if (rejectionReason == null) {
                 Log.d(TAG, "Stage 5: SMS[${index + 1}] ACCEPTED sender=${rawSms.sender}, body=${rawSms.body.take(60)}...")
                 relevant++
 
@@ -83,8 +90,7 @@ class SmsIngestionPipeline @Inject constructor(
                     hasException = true
                 }
             } else {
-                // Determine rejection reason
-                val rejectionReason = getFilterRejectionReason(rawSms)
+                ignoredCounts[rejectionReason] = (ignoredCounts[rejectionReason] ?: 0) + 1
                 Log.d(TAG, "Stage 5: SMS[${index + 1}] REJECTED sender=${rawSms.sender}, reason=$rejectionReason")
             }
         }
@@ -111,6 +117,19 @@ class SmsIngestionPipeline @Inject constructor(
         android.util.Log.e("SMS_TIMESTAMP_FIX", "newest processed SMS timestamp: $newestProcessedTimestamp")
         android.util.Log.e("SMS_TIMESTAMP_FIX", "new stored timestamp: $newStoredTimestamp")
 
+        val totalInbox = collector.getTotalInboxCount()
+        val outsideWindow = totalInbox - found
+        val windowLabel = if (sinceTimestamp > 0L) "sync window" else "14-day window"
+
+        android.util.Log.d("MOBILE_SYNC", "Candidate activity messages: $relevant")
+        android.util.Log.d("MOBILE_SYNC", "Duplicates removed: ${relevant - newActivitiesSaved}")
+        android.util.Log.d("MOBILE_SYNC", "Ignored:")
+        android.util.Log.d("MOBILE_SYNC", "  OTP: ${ignoredCounts["OTP/Security"] ?: 0}")
+        android.util.Log.d("MOBILE_SYNC", "  Promotion: ${ignoredCounts["Promotion"] ?: 0}")
+        android.util.Log.d("MOBILE_SYNC", "  Security: ${ignoredCounts["OTP/Security"] ?: 0}")
+        android.util.Log.d("MOBILE_SYNC", "  Duplicate: ${relevant - newActivitiesSaved}")
+        android.util.Log.d("MOBILE_SYNC", "  Outside $windowLabel: $outsideWindow")
+
         Log.d(TAG, "═══════════════════════════════════════════════")
         Log.d(TAG, "Stage 9: ═══ SMS PIPELINE SUMMARY ═══")
         Log.d(TAG, "Stage 9: SMS scanned:            $found")
@@ -127,22 +146,6 @@ class SmsIngestionPipeline @Inject constructor(
             relevant = relevant,
             newActivitiesSaved = newActivitiesSaved
         )
-    }
-
-    /**
-     * Replicate the SmsFilter logic to determine the exact rejection reason.
-     * This does NOT change filter behavior — it only diagnoses why a message was rejected.
-     */
-    private fun getFilterRejectionReason(sms: RawSms): String {
-        val lowerBody = sms.body.lowercase()
-        if (lowerBody.contains("otp")) return "Contains 'otp'"
-        if (lowerBody.contains("verification code")) return "Contains 'verification code'"
-        if (lowerBody.contains("do not share")) return "Contains 'do not share'"
-        
-        val merchant = MerchantPatterns.getMatchedMerchant(sms.sender, sms.body)
-        if (merchant == null) return "No known merchant matched in sender='${sms.sender}' or body"
-        
-        return "Unknown rejection reason"
     }
 }
 

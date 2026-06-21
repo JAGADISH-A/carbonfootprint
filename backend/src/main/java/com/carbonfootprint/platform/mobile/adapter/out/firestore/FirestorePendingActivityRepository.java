@@ -170,6 +170,43 @@ public class FirestorePendingActivityRepository implements PendingActivityReposi
         }
     }
 
+    @Override
+    public long countPendingByDeviceId(String deviceId) {
+        log.debug("FirestorePendingActivityRepository.countPendingByDeviceId() — deviceId={}", deviceId);
+        try {
+            var snapshot = firestore.collection(collectionName)
+                    .whereEqualTo("deviceId", deviceId)
+                    .whereNotEqualTo("status", PendingActivityStatus.PROCESSED.name())
+                    .get().get();
+            return snapshot.size();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Firestore countPendingByDeviceId interrupted", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Firestore countPendingByDeviceId failed", e.getCause());
+        }
+    }
+
+    @Override
+    public java.util.List<PendingActivity> findPendingByDeviceId(String deviceId) {
+        log.debug("FirestorePendingActivityRepository.findPendingByDeviceId() — deviceId={}", deviceId);
+        try {
+            var snapshot = firestore.collection(collectionName)
+                    .whereEqualTo("deviceId", deviceId)
+                    .whereNotEqualTo("status", PendingActivityStatus.PROCESSED.name())
+                    .get().get();
+            return snapshot.getDocuments().stream()
+                    .map(doc -> fromFirestoreMap(doc.getId(), doc.getData()))
+                    .toList();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Firestore findPendingByDeviceId interrupted", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Firestore findPendingByDeviceId failed", e.getCause());
+        }
+    }
+
+
     private Map<String, Object> toFirestoreMap(PendingActivity a) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", a.getId());

@@ -127,7 +127,10 @@ public class CarbonInsightService implements CarbonInsightUseCase {
     private List<String> buildAchievements(CarbonAnalyticsResponse analytics) {
         List<String> achievements = new ArrayList<>();
 
-        if (analytics.getTotalCarbonKg().compareTo(HIGH_EMISSION_THRESHOLD_KG) < 0) {
+        BigDecimal totalKg = analytics.getTotalCarbonKg();
+        if (totalKg == null) return achievements;
+
+        if (totalKg.compareTo(HIGH_EMISSION_THRESHOLD_KG) < 0) {
             achievements.add(String.format(
                     "Nice work — your total of %.1f kg CO\u2082e is well below the 100 kg threshold. You're keeping your footprint low!",
                     analytics.getTotalCarbonKg()));
@@ -159,7 +162,10 @@ public class CarbonInsightService implements CarbonInsightUseCase {
     private List<String> buildWarnings(CarbonAnalyticsResponse analytics) {
         List<String> warnings = new ArrayList<>();
 
-        if (analytics.getTotalCarbonKg().compareTo(HIGH_EMISSION_THRESHOLD_KG) >= 0) {
+        BigDecimal totalKg = analytics.getTotalCarbonKg();
+        if (totalKg == null) return warnings;
+
+        if (totalKg.compareTo(HIGH_EMISSION_THRESHOLD_KG) >= 0) {
             warnings.add(String.format(
                     "Your total of %.1f kg CO\u2082e is above 100 kg — there's room to bring that down.",
                     analytics.getTotalCarbonKg()));
@@ -264,7 +270,7 @@ public class CarbonInsightService implements CarbonInsightUseCase {
         if (trend == null || trend.size() < 2) return false;
 
         MonthlyESecondLastAndLast two = lastTwoMonths(trend);
-        if (two == null) return false;
+        if (two == null || two.last.getCarbonKg() == null || two.secondLast.getCarbonKg() == null) return false;
 
         return two.last.getCarbonKg().compareTo(two.secondLast.getCarbonKg()) < 0;
     }
@@ -274,7 +280,7 @@ public class CarbonInsightService implements CarbonInsightUseCase {
         if (trend == null || trend.size() < 2) return false;
 
         MonthlyESecondLastAndLast two = lastTwoMonths(trend);
-        if (two == null) return false;
+        if (two == null || two.last.getCarbonKg() == null || two.secondLast.getCarbonKg() == null) return false;
 
         if (two.secondLast.getCarbonKg().compareTo(BigDecimal.ZERO) == 0) return false;
 

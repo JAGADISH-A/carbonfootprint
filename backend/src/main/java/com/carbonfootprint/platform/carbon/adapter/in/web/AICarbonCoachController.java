@@ -43,7 +43,6 @@ import java.util.Optional;
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.CARBON_PATH)
-@Profile("!stub")
 @RequiredArgsConstructor
 @Tag(name = "AI Carbon Coach", description = "AI-powered personalized carbon emission coaching")
 public class AICarbonCoachController {
@@ -93,6 +92,6 @@ public class AICarbonCoachController {
      */
     private String getCurrentUserId() {
         // TODO: Extract from SecurityContext after Google Auth integration
-        return "anonymous";
+        return com.carbonfootprint.platform.shared.constant.DemoUser.ID;
     }
 }

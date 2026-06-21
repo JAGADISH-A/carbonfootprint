@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform, type MotionValue, useMotionValueEvent } from 'framer-motion'
-import { Activity, Flame, Calendar } from 'lucide-react'
-import { getCarbonAnalytics } from '@/api/services'
+import { Activity, Flame, Calendar, TrendingDown } from 'lucide-react'
+import { useDashboard } from '@/api/DashboardContext'
 import type { CarbonAnalyticsResponse } from '@/types/activity'
 
 function useCountUp(target: number, _duration = 1, delay = 0.2) {
@@ -74,19 +74,8 @@ function InsightCard({ icon, label, value, isNumeric, message, delay }: InsightC
 }
 
 export default function QuickInsights() {
-  const [data, setData] = useState<CarbonAnalyticsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getCarbonAnalytics()
-      .then((res) => {
-        if (res.success && res.data) {
-          setData(res.data)
-        }
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false))
-  }, [])
+  const { analytics, loading } = useDashboard()
+  const data = analytics as CarbonAnalyticsResponse | null
 
   const activityCount = Number(data?.activityCount ?? 0)
   const topCategory = data?.categoryTotals?.[0] ?? null
@@ -116,10 +105,20 @@ export default function QuickInsights() {
       : `~${avgDaily.toFixed(1)} kg/day — let's see if we can bring that down`
     : 'Your total impact will show here'
 
+  // Compute improvement opportunity from category spread
+  const categories = data?.categoryTotals ?? []
+  const improvementMessage = (() => {
+    if (categories.length < 2) return 'Upload more receipts to unlock personalized tips'
+    const sorted = [...categories].sort((a, b) => b.carbonKg - a.carbonKg)
+    const biggest = sorted[0]
+    const biggestLabel = biggest.category.charAt(0) + biggest.category.slice(1).toLowerCase()
+    return `${biggestLabel} is ${Number(biggest.carbonKg).toFixed(1)} kg — consider reducing ${biggestLabel.toLowerCase()} habits`
+  })()
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[0, 1, 2, 3].map((i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0 }}
@@ -142,7 +141,7 @@ export default function QuickInsights() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <InsightCard
         icon={<Activity className="w-5 h-5" />}
         label="Activities"
@@ -166,6 +165,14 @@ export default function QuickInsights() {
         isNumeric={activityCount > 0}
         message={monthlyMessage}
         delay={0.12}
+      />
+      <InsightCard
+        icon={<TrendingDown className="w-5 h-5" />}
+        label="Improvement"
+        value="Tip"
+        isNumeric={false}
+        message={improvementMessage}
+        delay={0.18}
       />
     </div>
   )

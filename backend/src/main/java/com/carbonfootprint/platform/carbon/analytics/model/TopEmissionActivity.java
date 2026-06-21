@@ -28,4 +28,7 @@ public class TopEmissionActivity {
     private String methodology;
 
     private Instant occurredAt;
+
+    private Double confidence;
 }
+

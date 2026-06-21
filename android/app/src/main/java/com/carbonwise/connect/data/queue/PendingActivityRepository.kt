@@ -25,6 +25,14 @@ class PendingActivityRepository @Inject constructor(
         return dao.getPendingCount()
     }
 
+    suspend fun countPending(): Int {
+        return dao.countPending()
+    }
+
+    suspend fun getPendingActivities(): List<PendingActivity> {
+        return dao.getPendingActivities().map { it.toDomain() }
+    }
+
     fun getPendingCountBySource(source: String): Flow<Int> {
         return dao.getPendingCountBySource(source)
     }

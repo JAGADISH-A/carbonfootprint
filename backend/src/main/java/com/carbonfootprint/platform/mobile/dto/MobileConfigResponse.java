@@ -14,6 +14,7 @@ import java.util.Map;
 public class MobileConfigResponse {
 
     private String latestAppVersion;
+    private String downloadUrl;
     private boolean forceUpdate;
     private int syncIntervalSeconds;
     private Map<String, String> featureFlags;

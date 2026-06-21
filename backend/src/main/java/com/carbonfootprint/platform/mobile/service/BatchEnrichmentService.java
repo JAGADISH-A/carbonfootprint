@@ -29,6 +29,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class BatchEnrichmentService {
 
+    private static final int MAX_RETRY_COUNT = 3;
+
     private final PendingActivityRepository pendingActivityRepository;
     private final GroqDocumentParser groqDocumentParser;
     private final ExtractionResultToActivityConverter extractionResultToActivityConverter;
@@ -42,11 +44,20 @@ public class BatchEnrichmentService {
 
         Optional<PendingActivity> optionalPendingActivity = pendingActivityRepository.findById(pendingActivityId);
         if (optionalPendingActivity.isEmpty()) {
-            log.error("[MOBILE_SYNC_PIPELINE] Failed to find pendingActivityId={}", pendingActivityId);
+            log.error("[MOBILE_SYNC_PIPELINE] Pending activity not found: pendingActivityId={}", pendingActivityId);
             return;
         }
 
         PendingActivity pendingActivity = optionalPendingActivity.get();
+
+        // Bounded retry: skip if already exceeded max retries
+        if (pendingActivity.getRetryCount() >= MAX_RETRY_COUNT
+                && pendingActivity.getStatus() == PendingActivityStatus.FAILED) {
+            log.warn("[MOBILE_SYNC_PIPELINE] Max retries ({}) exceeded for pendingActivityId={}, marking FAILED_PERMANENT",
+                    MAX_RETRY_COUNT, pendingActivityId);
+            pendingActivityRepository.updateStatus(pendingActivityId, PendingActivityStatus.FAILED);
+            return;
+        }
 
         try {
             // 1. Mark as PROCESSING
@@ -95,9 +106,12 @@ public class BatchEnrichmentService {
             log.info("[MOBILE_SYNC_PIPELINE] BatchEnrichmentService pending status updated to PROCESSED for pendingActivityId={}", pendingActivityId);
 
         } catch (Exception e) {
-            log.error("[MOBILE_SYNC_PIPELINE] BatchEnrichmentService exception for pendingActivityId={}: {}", pendingActivityId, e.getMessage(), e);
+            log.error("[MOBILE_SYNC_PIPELINE] Enrichment failed for pendingActivityId={}: {}", pendingActivityId, e.getMessage());
             pendingActivityRepository.updateFailure(pendingActivityId, e.getMessage());
-            log.warn("[MOBILE_SYNC_PIPELINE] BatchEnrichmentService retry count incremented, last error updated for pendingActivityId={}", pendingActivityId);
+            PendingActivity refreshed = pendingActivityRepository.findById(pendingActivityId).orElse(null);
+            if (refreshed != null && refreshed.getRetryCount() >= MAX_RETRY_COUNT) {
+                log.warn("[MOBILE_SYNC_PIPELINE] Max retries ({}) reached for pendingActivityId={}, giving up", MAX_RETRY_COUNT, pendingActivityId);
+            }
         }
     }
 

@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Clock, TrendingUp, Calendar } from 'lucide-react'
 import { getCarbonAnalytics } from '@/api/services'
+import { useDashboard } from '@/api/DashboardContext'
 import type { CarbonAnalyticsResponse, TopEmissionActivity } from '@/types/activity'
 import { DateGroup, CategoryFilter } from '@/components/history'
 import type { DateGroupData, CategoryFilterValue } from '@/components/history'
@@ -161,36 +162,42 @@ function formatShortDate(date: Date): string {
 
 export default function Activities() {
   const navigate = useNavigate()
+  const { lastUpdated } = useDashboard()
   const [analytics, setAnalytics] = useState<CarbonAnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('all')
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilterValue>(null)
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: { from?: string; to?: string } = {}
-      if (selectedPeriod === 'week') {
-        const d = new Date()
-        d.setDate(d.getDate() - 7)
-        params.from = d.toISOString()
-      } else if (selectedPeriod === 'month') {
-        const d = new Date()
-        d.setMonth(d.getMonth() - 1)
-        params.from = d.toISOString()
-      }
-      const res = await getCarbonAnalytics(params)
-      if (res.success && res.data) setAnalytics(res.data)
-    } catch {
-      // silent
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedPeriod])
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    const controller = new AbortController()
+    setLoading(true)
+    setError(false)
+    const params: { from?: string; to?: string } = {}
+    if (selectedPeriod === 'week') {
+      const d = new Date()
+      d.setDate(d.getDate() - 7)
+      params.from = d.toISOString()
+    } else if (selectedPeriod === 'month') {
+      const d = new Date()
+      d.setMonth(d.getMonth() - 1)
+      params.from = d.toISOString()
+    }
+    getCarbonAnalytics(params, controller.signal)
+      .then((res) => {
+        if (res.success && res.data) {
+          setAnalytics(res.data)
+        } else {
+          setError(true)
+        }
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setError(true)
+      })
+      .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [selectedPeriod, lastUpdated, retryKey])
 
   const activities = analytics?.topActivities ?? []
   const hasData = activities.length > 0
@@ -255,24 +262,40 @@ export default function Activities() {
         )}
       </motion.div>
 
-      {loading ? (
+      {error ? (
+        <div className="card p-8 text-center max-w-md mx-auto my-12">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+            <span className="text-xl text-red-600">⚠️</span>
+          </div>
+          <h3 className="text-base font-bold text-ink mb-1">Failed to load activities</h3>
+          <p className="text-xs text-ink-muted mb-4">
+            There was an issue fetching your carbon activities. Please try again.
+          </p>
+          <button
+            onClick={() => setRetryKey((k) => k + 1)}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md transition-colors text-xs"
+          >
+            Retry
+          </button>
+        </div>
+      ) : loading ? (
         <div className="space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card p-4">
+            <div key={i} className="card p-4 animate-pulse">
               <div className="flex items-center gap-4 mb-3">
-                <div className="skeleton w-24 h-5" />
-                <div className="skeleton w-16 h-4" />
-                <div className="skeleton w-20 h-4" />
+                <div className="skeleton w-24 h-5 bg-gray-200" />
+                <div className="skeleton w-16 h-4 bg-gray-200" />
+                <div className="skeleton w-20 h-4 bg-gray-200" />
               </div>
               <div className="space-y-2">
                 {[0, 1].map((j) => (
                   <div key={j} className="flex gap-3">
-                    <div className="skeleton w-10 h-10 rounded-xl" />
+                    <div className="skeleton w-10 h-10 rounded-xl bg-gray-200" />
                     <div className="flex-1 space-y-2">
-                      <div className="skeleton w-32 h-3" />
-                      <div className="skeleton w-48 h-2.5" />
+                      <div className="skeleton w-32 h-3 bg-gray-200" />
+                      <div className="skeleton w-48 h-2.5 bg-gray-200" />
                     </div>
-                    <div className="skeleton w-12 h-5" />
+                    <div className="skeleton w-12 h-5 bg-gray-200" />
                   </div>
                 ))}
               </div>
