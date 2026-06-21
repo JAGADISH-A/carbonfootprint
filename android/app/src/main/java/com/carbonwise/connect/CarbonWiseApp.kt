@@ -13,7 +13,16 @@ class CarbonWiseApp : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() {
+            android.util.Log.d("SYNC_DEBUG", "CarbonWiseApp: workManagerConfiguration getter called!")
+            return Configuration.Builder()
+                .setWorkerFactory(workerFactory)
+                .setMinimumLoggingLevel(android.util.Log.DEBUG)
+                .build()
+        }
+
+    override fun onCreate() {
+        super.onCreate()
+        android.util.Log.d("SYNC_DEBUG", "CarbonWiseApp: onCreate() called!")
+    }
 }

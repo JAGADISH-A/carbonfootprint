@@ -34,7 +34,7 @@ fun NavGraph(
         composable(Screen.Pairing.route) {
             com.carbonwise.connect.ui.pairing.PairDeviceScreen(
                 onPairedSuccessfully = {
-                    navController.navigate(Screen.CompanionStatus.route) {
+                    navController.navigate(Screen.CompanionStatus.route + "?justPaired=true") {
                         popUpTo(Screen.Pairing.route) { inclusive = true }
                     }
                 }
@@ -47,8 +47,18 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.CompanionStatus.route) {
+        composable(
+            route = Screen.CompanionStatus.route + "?justPaired={justPaired}",
+            arguments = listOf(
+                androidx.navigation.navArgument("justPaired") {
+                    type = androidx.navigation.NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val justPaired = backStackEntry.arguments?.getBoolean("justPaired") ?: false
             CompanionStatusScreen(
+                justPaired = justPaired,
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 },

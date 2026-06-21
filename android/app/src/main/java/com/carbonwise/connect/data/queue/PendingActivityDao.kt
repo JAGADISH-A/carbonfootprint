@@ -34,4 +34,8 @@ interface PendingActivityDao {
 
     @Query("DELETE FROM pending_activities WHERE syncStatus = 'SYNCED' AND receivedTimestamp < :olderThanMillis")
     suspend fun cleanupSynced(olderThanMillis: Long)
+
+    // Diagnostic: raw total row count for pipeline instrumentation
+    @Query("SELECT COUNT(*) FROM pending_activities")
+    suspend fun getTotalRowCount(): Int
 }

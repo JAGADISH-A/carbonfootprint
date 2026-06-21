@@ -34,11 +34,19 @@ class TokenManager @Inject constructor(
             .apply()
     }
 
-    fun getDeviceToken(): String? = sharedPreferences.getString("device_token", null)
+    fun getDeviceToken(): String? {
+        val token = sharedPreferences.getString("device_token", null)
+        android.util.Log.d("UploadPipeline", "TokenManager.getDeviceToken() returning: ${if (token != null) "token present (length: ${token.length})" else "null"}")
+        return token
+    }
 
     fun getRefreshToken(): String? = sharedPreferences.getString("refresh_token", null)
 
-    fun getDeviceId(): String? = sharedPreferences.getString("device_id", null)
+    fun getDeviceId(): String? {
+        val devId = sharedPreferences.getString("device_id", null)
+        android.util.Log.d("UploadPipeline", "TokenManager.getDeviceId() returning: $devId")
+        return devId
+    }
 
     fun saveDeviceId(deviceId: String) {
         sharedPreferences.edit()

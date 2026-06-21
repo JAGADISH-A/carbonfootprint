@@ -1,6 +1,7 @@
 package com.carbonwise.connect.ui.status
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,17 +51,73 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import com.carbonwise.connect.data.model.HealthStatus
 
 @Composable
 fun CompanionStatusScreen(
+    justPaired: Boolean = false,
     onNavigateToSettings: () -> Unit,
     onUnpaired: () -> Unit,
     viewModel: CompanionStatusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val healthState by viewModel.healthState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showUnpairConfirmDialog by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+
+    val smsStatus = healthState.components.find { it.id == "sms" }?.status
+    val notifStatus = healthState.components.find { it.id == "notification" }?.status
+    val allPermissionsGranted = smsStatus == HealthStatus.HEALTHY && notifStatus == HealthStatus.HEALTHY
+    var hasCheckedPermissionsAfterPairing by rememberSaveable { mutableStateOf(false) }
+    var showPostPairingDialog by rememberSaveable { mutableStateOf(false) }
+    var hasReturnedFromSettings by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(justPaired, healthState.components) {
+        if (justPaired && !hasCheckedPermissionsAfterPairing && healthState.components.isNotEmpty()) {
+            if (!allPermissionsGranted) {
+                showPostPairingDialog = true
+            }
+            hasCheckedPermissionsAfterPairing = true
+        }
+    }
+
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        viewModel.refreshPermissions()
+        val isNotifMissing = notifStatus != HealthStatus.HEALTHY
+        if (isNotifMissing) {
+            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+    }
+
+    val requestPermissions = {
+        showPostPairingDialog = false
+        hasReturnedFromSettings = true
+        val isSmsMissing = smsStatus != HealthStatus.HEALTHY
+        val isNotifMissing = notifStatus != HealthStatus.HEALTHY
+        
+        if (isSmsMissing) {
+            smsPermissionLauncher.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS))
+        } else if (isNotifMissing) {
+            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } else {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -110,6 +167,53 @@ fun CompanionStatusScreen(
         )
     }
 
+    if (showPostPairingDialog) {
+        AlertDialog(
+            onDismissRequest = { showPostPairingDialog = false },
+            title = { Text("Complete Setup", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        text = "CarbonWise is almost ready to start tracking your carbon footprint. To do this, we need a few permissions:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "📩 Transaction Messages – Used to identify bank and UPI transactions.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "🔔 Notifications – Used to capture supported payment notifications in real time.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Your personal conversations are never analyzed.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = requestPermissions
+                ) {
+                    Text("Continue Setup")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showPostPairingDialog = false }
+                ) {
+                    Text("Later")
+                }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -123,6 +227,107 @@ fun CompanionStatusScreen(
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
+
+            if (hasReturnedFromSettings) {
+                val isDark = isSystemInDarkTheme()
+                if (allPermissionsGranted) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDark) Color(0xFF1B5E20) else Color(0xFFE8F5E9)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = if (isDark) Color(0xFFA5D6A7) else Color(0xFF2E7D32),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "🎉 CarbonWise is Ready",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Your device is ready to sync transaction data. We will start tracking your carbon footprint automatically.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isDark) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
+                            )
+                        }
+                    }
+                } else {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDark) Color(0xFFC62828) else Color(0xFFFFEBEE)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (isDark) Color(0xFFFFCDD2) else Color(0xFFC62828),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Additional Permissions Required",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFFFFCDD2) else Color(0xFFB71C1C)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "To automatically track transactions, please grant the following permissions:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isDark) Color(0xFFFFCDD2) else Color(0xFFB71C1C)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (smsStatus != HealthStatus.HEALTHY) {
+                                Text(
+                                    text = "• 📩 Transaction Messages",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDark) Color(0xFFFFCDD2) else Color(0xFFB71C1C),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            if (notifStatus != HealthStatus.HEALTHY) {
+                                Text(
+                                    text = "• 🔔 Notifications",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDark) Color(0xFFFFCDD2) else Color(0xFFB71C1C),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = requestPermissions,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isDark) Color(0xFFE53935) else Color(0xFFD32F2F),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Continue Setup")
+                            }
+                        }
+                    }
+                }
+            }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)

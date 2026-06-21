@@ -19,5 +19,6 @@ data class CompanionHealthState(
     val overallHealth: HealthStatus = HealthStatus.CRITICAL,
     val warnings: List<String> = emptyList(),
     val recommendations: List<String> = emptyList(),
-    val components: List<HealthComponent> = emptyList()
+    val components: List<HealthComponent> = emptyList(),
+    val lastSyncTime: Long = 0L
 )

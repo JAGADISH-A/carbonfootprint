@@ -101,32 +101,17 @@ public class MobileSyncController {
             @Valid @RequestBody BatchSyncRequest request,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
 
+        String userId = (String) httpRequest.getAttribute("userId");
         String deviceId = (String) httpRequest.getAttribute("deviceId");
         
         if (!deviceId.equals(request.getDeviceId())) {
             return ResponseEntity.status(403).body(ApiResponse.error("403", "Device ID mismatch"));
         }
 
-        log.info("Batch sync received: deviceId={} syncSessionId={} items={}",
+        log.info("[MOBILE_SYNC_PIPELINE] Batch sync received: deviceId={} syncSessionId={} items={}",
                 request.getDeviceId(), request.getSyncSessionId(), request.getItems().size());
 
-        // Process each item individually
-        java.util.List<BatchSyncItemResponse> results = request.getItems().stream()
-                .map(item -> {
-                    // MOCK Implementation for now, can be implemented properly in MobileSyncService
-                    boolean isSuccess = !item.getMessageBody().contains("fail"); // mock logic
-                    return BatchSyncItemResponse.builder()
-                            .id(item.getId())
-                            .status(isSuccess ? "SUCCESS" : "FAILED")
-                            .reason(isSuccess ? null : "Validation Error")
-                            .build();
-                })
-                .toList();
-
-        BatchSyncResponse response = BatchSyncResponse.builder()
-                .syncSessionId(request.getSyncSessionId())
-                .results(results)
-                .build();
+        BatchSyncResponse response = mobileSyncService.processBatch(request, userId);
 
         return ResponseEntity.ok(ApiResponse.success(response, "Batch synchronization complete"));
     }

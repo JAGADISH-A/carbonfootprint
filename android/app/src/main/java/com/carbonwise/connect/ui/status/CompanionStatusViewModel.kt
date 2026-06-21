@@ -58,11 +58,14 @@ class CompanionStatusViewModel @Inject constructor(
     init {
         loadStatus()
         observePendingCount()
-        observeLastSync()
 
         viewModelScope.launch {
-            healthState.collect {
-                android.util.Log.d("PermissionCheck", "ViewModel healthState collected: $it")
+            healthState.collect { state ->
+                android.util.Log.d("PermissionCheck", "ViewModel healthState collected: $state")
+                android.util.Log.d("UI", "Loaded raw lastSyncTime=${state.lastSyncTime}")
+                val displayTime = formatLastSyncTime(state.lastSyncTime)
+                android.util.Log.d("UI", "Displaying lastSyncTime=$displayTime")
+                _uiState.update { it.copy(lastSync = displayTime) }
             }
         }
     }
@@ -70,6 +73,10 @@ class CompanionStatusViewModel @Inject constructor(
     fun refreshPermissions() {
         android.util.Log.d("PermissionCheck", "Refresh started in ViewModel")
         companionHealthManager.refresh()
+        val time = healthState.value.lastSyncTime
+        val displayTime = formatLastSyncTime(time)
+        android.util.Log.d("UI", "Refreshing and displaying lastSyncTime=$displayTime")
+        _uiState.update { it.copy(lastSync = displayTime) }
     }
 
     private fun loadStatus() {
@@ -125,25 +132,42 @@ class CompanionStatusViewModel @Inject constructor(
         }
     }
 
-    private fun observeLastSync() {
-        viewModelScope.launch {
-            settingsStore.lastSyncTime.collect { time ->
-                if (time == 0L) {
-                    _uiState.update { it.copy(lastSync = "Never") }
-                } else {
-                    val displayTime = if (System.currentTimeMillis() - time < 60_000) {
-                        "Just now"
-                    } else {
-                        android.text.format.DateUtils.getRelativeTimeSpanString(
-                            time,
-                            System.currentTimeMillis(),
-                            android.text.format.DateUtils.MINUTE_IN_MILLIS
-                        ).toString()
-                    }
-                    _uiState.update { it.copy(lastSync = displayTime) }
-                }
-            }
+    private fun formatLastSyncTime(time: Long): String {
+        if (time == 0L) return "Ready for first sync"
+        val currentTime = System.currentTimeMillis()
+        val diff = currentTime - time
+        if (diff < 60_000) {
+            return "Last synced just now"
         }
+        if (diff < 3_600_000) {
+            val minutes = (diff / 60_000).toInt()
+            val suffix = if (minutes == 1) "minute" else "minutes"
+            return "Last synced $minutes $suffix ago"
+        }
+        
+        val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+        val formattedTime = timeFormat.format(java.util.Date(time))
+        
+        val calToday = java.util.Calendar.getInstance().apply { timeInMillis = currentTime }
+        val calTime = java.util.Calendar.getInstance().apply { timeInMillis = time }
+        
+        val isSameDay = calToday.get(java.util.Calendar.YEAR) == calTime.get(java.util.Calendar.YEAR) &&
+                        calToday.get(java.util.Calendar.DAY_OF_YEAR) == calTime.get(java.util.Calendar.DAY_OF_YEAR)
+                        
+        if (isSameDay) {
+            return "Today • $formattedTime"
+        }
+        
+        calToday.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        val isYesterday = calToday.get(java.util.Calendar.YEAR) == calTime.get(java.util.Calendar.YEAR) &&
+                          calToday.get(java.util.Calendar.DAY_OF_YEAR) == calTime.get(java.util.Calendar.DAY_OF_YEAR)
+                          
+        if (isYesterday) {
+            return "Yesterday • $formattedTime"
+        }
+        
+        val fullFormat = java.text.SimpleDateFormat("MMM d, yyyy • h:mm a", java.util.Locale.getDefault())
+        return fullFormat.format(java.util.Date(time))
     }
 
     fun triggerLocalSync() {
@@ -154,6 +178,13 @@ class CompanionStatusViewModel @Inject constructor(
                 // Enqueue WorkManager sync instead of local
                 android.util.Log.d("ManualSync", "Enqueuing WorkManager request")
                 com.carbonwise.connect.service.SyncWorker.syncNow(context)
+                
+                // Immediately query WorkManager
+                val workInfos = WorkManager.getInstance(context).getWorkInfosForUniqueWork("carbonwise_manual_sync").get()
+                for (info in workInfos) {
+                    android.util.Log.d("SYNC_DEBUG", "WorkInfo: id=${info.id}, state=${info.state}, runAttemptCount=${info.runAttemptCount}, tags=${info.tags}")
+                }
+                
                 _uiState.update { 
                     it.copy(
                         syncResult = "Sync initiated."

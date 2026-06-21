@@ -9,6 +9,12 @@ import com.carbonfootprint.platform.ingestion.normalization.ActivityNormalizer;
 import com.carbonfootprint.platform.mobile.dto.EnrichedTransaction;
 import com.carbonfootprint.platform.mobile.dto.MobileSyncRequest;
 import com.carbonfootprint.platform.mobile.dto.MobileSyncResponse;
+import com.carbonfootprint.platform.mobile.dto.BatchSyncRequest;
+import com.carbonfootprint.platform.mobile.dto.BatchSyncResponse;
+import com.carbonfootprint.platform.mobile.dto.BatchSyncItemResponse;
+import com.carbonfootprint.platform.mobile.model.PendingActivity;
+import com.carbonfootprint.platform.mobile.model.PendingActivityStatus;
+import com.carbonfootprint.platform.mobile.port.out.PendingActivityRepository;
 import com.carbonfootprint.platform.mobile.mapper.MobileTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +51,8 @@ public class MobileSyncService {
     private final CarbonHintEngine carbonHintEngine;
     private final List<ActivityNormalizer> activityNormalizers;
     private final ActivityRepository activityRepository;
+    private final PendingActivityRepository pendingActivityRepository;
+    private final BatchEnrichmentService batchEnrichmentService;
 
     /**
      * Processes a batch of enriched transactions from the Android Companion App.
@@ -126,6 +134,61 @@ public class MobileSyncService {
                 .failureCount(failedCount)
                 .failedTransactionIds(failedIds)
                 .build();
+    }
+
+    public BatchSyncResponse processBatch(BatchSyncRequest request, String userId) {
+        log.info("[MOBILE_SYNC_PIPELINE] MobileSyncService - validating and deduplicating batch sync: deviceId={} syncSessionId={} items={} userId={}",
+                request.getDeviceId(), request.getSyncSessionId(), request.getItems().size(), userId);
+
+        List<BatchSyncItemResponse> responses = new ArrayList<>();
+        List<String> savedPendingActivityIds = new ArrayList<>();
+
+        for (var item : request.getItems()) {
+            try {
+                PendingActivity pendingActivity = PendingActivity.builder()
+                        .id(item.getId())
+                        .userId(userId)
+                        .deviceId(request.getDeviceId())
+                        .syncSessionId(request.getSyncSessionId())
+                        .source(item.getSource() != null ? item.getSource() : "MOBILE_SMS")
+                        .rawPayload(item.getMessageBody())
+                        .merchant(item.getNormalizedMerchant())
+                        .amount(null) // Amount typically needs parsing, leaving null if not provided
+                        .timestamp(Instant.ofEpochMilli(item.getReceivedTimestamp()))
+                        .retryCount(0)
+                        .status(PendingActivityStatus.NEW)
+                        .createdAt(Instant.now())
+                        .build();
+
+                log.debug("[MOBILE_SYNC_PIPELINE] MobileSyncService - saving pending activity: id={}", item.getId());
+                pendingActivityRepository.upsert(pendingActivity);
+                savedPendingActivityIds.add(pendingActivity.getId());
+
+                responses.add(BatchSyncItemResponse.builder()
+                        .id(item.getId())
+                        .status("SUCCESS")
+                        .build());
+            } catch (Exception e) {
+                log.error("[MOBILE_SYNC_PIPELINE] MobileSyncService - failed to save pending activity: id={} error={}", item.getId(), e.getMessage(), e);
+                responses.add(BatchSyncItemResponse.builder()
+                        .id(item.getId())
+                        .status("FAILED")
+                        .reason(e.getMessage())
+                        .build());
+            }
+        }
+
+        BatchSyncResponse response = BatchSyncResponse.builder()
+                .syncSessionId(request.getSyncSessionId())
+                .results(responses)
+                .build();
+
+        log.info("[MOBILE_SYNC_PIPELINE] MobileSyncService - triggering async enrichment for {} saved items", savedPendingActivityIds.size());
+        for (String id : savedPendingActivityIds) {
+            batchEnrichmentService.enrichPendingActivity(id);
+        }
+
+        return response;
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────

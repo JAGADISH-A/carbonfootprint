@@ -130,3 +130,11 @@ captures/
 
 # Generated
 *.iml
+
+# Local database, log and temporary files
+android/*.db
+android/*.db-wal
+android/*.db-shm
+android/*.db-journal
+android/*.txt
+android/*.xml

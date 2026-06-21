@@ -19,6 +19,7 @@ import com.carbonwise.connect.data.repository.ApiResult
 import com.carbonwise.connect.data.repository.UploadRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -26,11 +27,18 @@ import java.util.concurrent.TimeUnit
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val uploadRepository: UploadRepository
+    private val uploadRepository: UploadRepository,
+    private val settingsStore: com.carbonwise.connect.data.local.SettingsStore,
+    private val smsIngestionPipeline: com.carbonwise.connect.sms.SmsIngestionPipeline,
+    private val pendingActivityRepository: com.carbonwise.connect.data.queue.PendingActivityRepository
 ) : CoroutineWorker(context, params) {
 
     init {
-        android.util.Log.d("SyncWorker", "Worker instantiated")
+        try {
+            android.util.Log.d("SYNC_DEBUG", "Stage 1: Worker instantiated")
+        } catch (e: Exception) {
+            android.util.Log.e("SYNC_DEBUG", "Stage 1 failed", e)
+        }
     }
 
     companion object {
@@ -88,28 +96,125 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        android.util.Log.d("ManualSync", "doWork() called")
-        android.util.Log.d("SyncWorker", "Starting sync")
-        val syncSessionId = UUID.randomUUID().toString()
-        val startTime = System.currentTimeMillis()
+        android.util.Log.e("SYNC_TRACE", "1 entered doWork")
+        try {
+            android.util.Log.e("SYNC_TRACE", "2 before generating syncSessionId")
+            val syncSessionId = try {
+                val uuid = UUID.randomUUID().toString()
+                android.util.Log.e("SYNC_TRACE", "3 syncSessionId generated: $uuid")
+                uuid
+            } catch (e: Exception) {
+                android.util.Log.e("SYNC_TRACE", "EXCEPTION during UUID.randomUUID()", e)
+                throw e
+            }
 
-        return try {
-            android.util.Log.d("ManualSync", "UploadRepository.syncBatch()")
-            when (val syncResult = uploadRepository.syncBatch(syncSessionId)) {
-                is ApiResult.Success -> {
-                    // Log success: syncSessionId, duration = System.currentTimeMillis() - startTime, uploaded count
-                    android.util.Log.d("SyncWorker", "Upload success")
-                    Result.success()
+            android.util.Log.e("SYNC_TRACE", "4 before reading lastSmsScanTimestamp from settingsStore")
+            val lastSmsScan = try {
+                val ts = settingsStore.lastSmsScanTimestamp.first()
+                android.util.Log.e("SYNC_TRACE", "5 lastSmsScanTimestamp fetched: $ts")
+                ts
+            } catch (e: Exception) {
+                android.util.Log.e("SYNC_TRACE", "EXCEPTION during lastSmsScanTimestamp.first()", e)
+                throw e
+            }
+
+            android.util.Log.e("SYNC_TRACE", "6 before SmsIngestionPipeline.runPipeline")
+            val smsResult = try {
+                val result = smsIngestionPipeline.runPipeline(lastSmsScan)
+                android.util.Log.e("SYNC_TRACE", "7 SmsIngestionPipeline.runPipeline finished. Found: ${result.found}, Relevant: ${result.relevant}")
+                result
+            } catch (e: Exception) {
+                android.util.Log.e("SYNC_TRACE", "EXCEPTION during runPipeline()", e)
+                throw e
+            }
+
+
+
+            val notifFound = 0
+            val notifRelevant = 0
+
+            android.util.Log.e("SYNC_TRACE", "10 before fetching pendingQueueCount")
+            val pendingQueueCount = try {
+                val count = pendingActivityRepository.getPendingCount().first()
+                android.util.Log.e("SYNC_TRACE", "11 pendingQueueCount fetched: $count")
+                count
+            } catch (e: Exception) {
+                android.util.Log.e("SYNC_TRACE", "EXCEPTION during getPendingCount().first()", e)
+                throw e
+            }
+
+            var uploadSuccess = 0
+            var uploadFailed = 0
+
+            android.util.Log.e("SYNC_TRACE", "12 before checking pendingQueueCount > 0 ($pendingQueueCount)")
+            if (pendingQueueCount > 0) {
+                android.util.Log.e("SYNC_TRACE", "13 before uploadRepository.syncBatch()")
+                try {
+                    val syncResult = uploadRepository.syncBatch(syncSessionId)
+                    android.util.Log.e("SYNC_TRACE", "14 after uploadRepository.syncBatch() returned: $syncResult")
+                    when (syncResult) {
+                        is ApiResult.Success -> {
+                            android.util.Log.e("SYNC_TRACE", "15 syncResult is Success")
+                            uploadSuccess = syncResult.data?.successCount ?: 0
+                            uploadFailed = syncResult.data?.failedCount ?: 0
+                        }
+                        is ApiResult.Error -> {
+                            android.util.Log.e("SYNC_TRACE", "16 syncResult is Error: ${syncResult.message}")
+                            uploadFailed = pendingQueueCount
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SYNC_TRACE", "EXCEPTION during syncBatch()", e)
+                    throw e
                 }
-                is ApiResult.Error -> {
-                    // Log failure
-                    android.util.Log.e("SyncWorker", "Sync failed: ${syncResult.message}")
-                    Result.retry()
-                }
+            } else {
+                android.util.Log.e("SYNC_TRACE", "17 pendingQueueCount is 0, skipping uploadRepository.syncBatch()")
+            }
+
+            android.util.Log.e("SYNC_TRACE", "18 before fetching remainingQueueCount")
+            val remainingQueueCount = try {
+                val count = pendingActivityRepository.getPendingCount().first()
+                android.util.Log.e("SYNC_TRACE", "19 remainingQueueCount fetched: $count")
+                count
+            } catch (e: Exception) {
+                android.util.Log.e("SYNC_TRACE", "EXCEPTION during remainingQueueCount.first()", e)
+                throw e
+            }
+
+            val logMessage = """
+                ========== Sync Cycle ==========
+                SMS Scan
+                Found: ${smsResult.found}
+                Relevant: ${smsResult.relevant}
+                Duplicates: ${smsResult.duplicates}
+                Notification Scan
+                Found: $notifFound
+                Relevant: $notifRelevant
+                Pending Queue:
+                $pendingQueueCount activities
+                Uploading...
+                Backend
+                Success: $uploadSuccess
+                Failed: $uploadFailed
+                Room Queue Remaining:
+                $remainingQueueCount
+                ========== Sync Complete ==========
+            """.trimIndent()
+            
+            android.util.Log.i("SyncWorker", "\n$logMessage")
+
+            android.util.Log.e("SYNC_TRACE", "20 before checking uploadFailed > 0 ($uploadFailed)")
+            if (uploadFailed > 0) {
+                android.util.Log.e("SYNC_TRACE", "21 returning Result.retry()")
+                return Result.retry()
+            } else {
+                android.util.Log.e("SYNC_TRACE", "22 returning Result.success()")
+                return Result.success()
             }
         } catch (exception: Exception) {
-            android.util.Log.e("SyncWorker", "Sync failed", exception)
-            Result.retry()
+            android.util.Log.e("SYNC_TRACE", "23 caught exception in outer block of doWork()", exception)
+            android.util.Log.e("SYNC_TRACE", "24 returning Result.retry()")
+            return Result.retry()
         }
     }
 }

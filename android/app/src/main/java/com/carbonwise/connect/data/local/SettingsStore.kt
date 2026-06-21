@@ -28,7 +28,9 @@ class SettingsStore @Inject constructor(
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val NOTIFICATION_SYNC_ENABLED = booleanPreferencesKey("notification_sync_enabled")
         val SMS_SYNC_ENABLED = booleanPreferencesKey("sms_sync_enabled")
-        val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
+        val LAST_SYNC_TIME = longPreferencesKey("last_sync_time") // Legacy, keeping for compatibility if needed elsewhere
+        val LAST_SMS_SCAN_TIMESTAMP = longPreferencesKey("last_sms_scan_timestamp")
+        val LAST_SUCCESSFUL_UPLOAD_TIMESTAMP = longPreferencesKey("last_successful_upload_timestamp")
     }
 
     val accountEmail: Flow<String> = context.dataStore.data.map { it[Keys.ACCOUNT_EMAIL] ?: "" }
@@ -39,6 +41,8 @@ class SettingsStore @Inject constructor(
     val notificationSyncEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.NOTIFICATION_SYNC_ENABLED] ?: true }
     val smsSyncEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.SMS_SYNC_ENABLED] ?: false }
     val lastSyncTime: Flow<Long> = context.dataStore.data.map { it[Keys.LAST_SYNC_TIME] ?: 0L }
+    val lastSmsScanTimestamp: Flow<Long> = context.dataStore.data.map { it[Keys.LAST_SMS_SCAN_TIMESTAMP] ?: 0L }
+    val lastSuccessfulUploadTimestamp: Flow<Long> = context.dataStore.data.map { it[Keys.LAST_SUCCESSFUL_UPLOAD_TIMESTAMP] ?: 0L }
 
     suspend fun setConnected(connected: Boolean) {
         context.dataStore.edit { it[Keys.CONNECTED] = connected }
@@ -66,6 +70,16 @@ class SettingsStore @Inject constructor(
 
     suspend fun setLastSyncTime(time: Long) {
         context.dataStore.edit { it[Keys.LAST_SYNC_TIME] = time }
+    }
+
+    suspend fun setLastSmsScanTimestamp(time: Long) {
+        context.dataStore.edit { it[Keys.LAST_SMS_SCAN_TIMESTAMP] = time }
+    }
+
+    suspend fun setLastSuccessfulUploadTimestamp(time: Long) {
+        android.util.Log.d("UploadPipeline", "SettingsStore.setLastSuccessfulUploadTimestamp(time=$time) called")
+        context.dataStore.edit { it[Keys.LAST_SUCCESSFUL_UPLOAD_TIMESTAMP] = time }
+        android.util.Log.d("UploadPipeline", "SettingsStore.setLastSuccessfulUploadTimestamp() completed")
     }
 
     suspend fun clearAll() {

@@ -1,5 +1,6 @@
 package com.carbonwise.connect.data.permission
 
+import com.carbonwise.connect.data.local.SettingsStore
 import com.carbonwise.connect.data.model.CompanionHealthState
 import com.carbonwise.connect.data.model.HealthComponent
 import com.carbonwise.connect.data.model.HealthStatus
@@ -7,17 +8,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CompanionHealthManager @Inject constructor(
-    private val permissionManager: PermissionManager
-    // In the future:
-    // private val authManager: AuthenticationManager
-    // private val syncManager: SyncManager
+    private val permissionManager: PermissionManager,
+    private val settingsStore: SettingsStore
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -27,7 +26,11 @@ class CompanionHealthManager @Inject constructor(
 
     // Aggregate health information from all managers
     // Future expansion: use combine(permissionState, authState, syncState) { perm, auth, sync -> ... }
-    val healthState: StateFlow<CompanionHealthState> = permissionManager.permissionState.map { permState ->
+    val healthState: StateFlow<CompanionHealthState> = combine(
+        permissionManager.permissionState,
+        settingsStore.lastSuccessfulUploadTimestamp
+    ) { permState, lastSync ->
+        android.util.Log.d("HEALTH", "Loaded lastSyncTime=$lastSync")
         val components = mutableListOf<HealthComponent>()
         val warnings = mutableListOf<String>()
         val recommendations = mutableListOf<String>()
@@ -105,7 +108,8 @@ class CompanionHealthManager @Inject constructor(
             overallHealth = overallHealth,
             warnings = warnings,
             recommendations = recommendations,
-            components = components
+            components = components,
+            lastSyncTime = lastSync
         )
     }.stateIn(
         scope = scope,
